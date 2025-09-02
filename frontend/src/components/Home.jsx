@@ -76,7 +76,7 @@ const HomePage = ({ isAuthenticated, userType, setIsAuthenticated, setUserType }
 
           <div className="header-logo">
             <span className="logo-icon">⚡</span>
-            <h1 className="logo-text">InstaMarket</h1>
+            <h1 className="logo-text">Surety Cart</h1>
           </div>
 
           <div className="header-actions">

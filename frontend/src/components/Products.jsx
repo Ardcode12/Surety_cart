@@ -40,13 +40,27 @@ const Products = () => {
   }, []);
 
   // Sample products data (fallback)
-   const handleLogout = () => {
-  localStorage.removeItem('token');
-   localStorage.removeItem('userInfo');
-   localStorage.removeItem('userType');
-      setIsLoggedIn(false);
- navigate('/login');  // or navigate('/');
- };
+   // Replace this function in Products.jsx
+const handleLogout = () => {
+  try {
+    // Clear all auth-related storage
+    localStorage.removeItem('token');
+    localStorage.removeItem('userInfo');
+    localStorage.removeItem('userType');
+    localStorage.removeItem('sellerId');
+
+    // Update local UI state for this component
+    setIsLoggedIn(false);
+
+    // Force a hard redirect so App re-initializes auth to "logged out"
+    window.location.replace('/login');
+  } catch (e) {
+    console.error('Logout error:', e);
+    // Fallback redirect
+    window.location.href = '/login';
+  }
+};
+
 
   
   const loadProducts = async () => {
@@ -217,7 +231,7 @@ const handleWishlist = async (product) => {
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <ShoppingBag className="logo-icon" />
-            <h2>InstaMarket</h2>
+            <h2>Surety Cart</h2>
           </div>
           <button className="close-sidebar" onClick={() => setShowSidebar(false)}>
             <X size={24} />
@@ -290,7 +304,7 @@ const handleWishlist = async (product) => {
 
           <div className="logo-section">
             <Shield className="logo-icon" />
-            <h1 className="logo-text">InstaMarket</h1>
+            <h1 className="logo-text">Surety Cart</h1>
           </div>
           
           <div className="search-bar">

@@ -134,3 +134,4 @@ router.post("/seller/login", async (req, res) => {
 });
 
 module.exports = router;
+  
