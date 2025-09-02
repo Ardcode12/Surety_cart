@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { fetchAllProducts } from '../services/api';
+import { fetchAllProducts, addToCart, addToWishlist, getFullImageUrl } from '../services/api';
+
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import './Products.css';
@@ -14,6 +15,7 @@ import {
 
 const Products = () => {
   const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(() => Boolean(localStorage.getItem('token')));
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [viewMode, setViewMode] = useState('grid');
@@ -38,6 +40,14 @@ const Products = () => {
   }, []);
 
   // Sample products data (fallback)
+   const handleLogout = () => {
+  localStorage.removeItem('token');
+   localStorage.removeItem('userInfo');
+   localStorage.removeItem('userType');
+      setIsLoggedIn(false);
+ navigate('/login');  // or navigate('/');
+ };
+
   
   const loadProducts = async () => {
     setIsLoading(true);
@@ -45,15 +55,17 @@ const Products = () => {
       const response = await fetchAllProducts();
       if (response && response.data && response.data.length > 0) {
         const formattedProducts = response.data.map(p => ({
-          ...p,
-          name: p.name || 'Unnamed Product',
-          id: p._id || p.id,
-          description: p.description || 'No description available',
-          discount: p.discount || 0,
+  ...p,
+  
+  name: p.name || 'Unnamed Product',
+  id: p._id || p.id,
+  image: p.image, // backend returns '/uploads/...'
+  description: p.description || 'No description available',
+  discount: p.discount || 0,
+  isProtected: p.isProtected !== undefined ? p.isProtected : true,
+  seller: p.seller || { name: "Unknown Seller", socialId: "@unknown", verified: false, rating: 0 }
+}));
 
-          isProtected: p.isProtected !== undefined ? p.isProtected : true,
-          seller: p.seller || { name: "Unknown Seller", socialId: "@unknown", verified: false, rating: 0 }
-        }));
         setProducts(formattedProducts);
         setFilteredProducts(formattedProducts);
       } 
@@ -68,53 +80,55 @@ const Products = () => {
 
   // Filter and Sort functions
   useEffect(() => {
-    let filtered = [...products];
+let filtered = [...products];
 
-    // Category filter
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(p => p.category === selectedCategory);
-    }
+// Category filter
+if (selectedCategory !== 'all') {
+filtered = filtered.filter(p => p.category === selectedCategory);
+}
 
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(p => 
-        p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.seller?.name && p.seller.name.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
+// Search filter (use name, not title)
+if (searchQuery.trim()) {
+const q = searchQuery.toLowerCase();
+filtered = filtered.filter(p =>
+(p.name || '').toLowerCase().includes(q) ||
+(p.seller?.name || '').toLowerCase().includes(q)
+);
+}
 
-    // Price filter
-    filtered = filtered.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
+// Price filter
+filtered = filtered.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
 
-    // Sort
-    switch(sortBy) {
-      case 'priceLow':
-        filtered.sort((a, b) => a.price - b.price);
-        break;
-      case 'priceHigh':
-        filtered.sort((a, b) => b.price - a.price);
-        break;
-      case 'rating':
-        filtered.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'discount':
-        filtered.sort((a, b) => b.discount - a.discount);
-        break;
-      default:
-        filtered.sort((a, b) => b.reviews - a.reviews);
-    }
+// Sort
+switch (sortBy) {
+case 'priceLow':
+filtered.sort((a, b) => a.price - b.price);
+break;
+case 'priceHigh':
+filtered.sort((a, b) => b.price - a.price);
+break;
+case 'rating':
+filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+break;
+case 'discount':
+filtered.sort((a, b) => (b.discount || 0) - (a.discount || 0));
+break;
+default:
+filtered.sort((a, b) => (b.reviews || 0) - (a.reviews || 0));
+}
 
-    setFilteredProducts(filtered);
-    setCurrentPage(1);
-  }, [products, selectedCategory, sortBy, priceRange, searchQuery]);
+setFilteredProducts(filtered);
+setCurrentPage(1);
+}, [products, selectedCategory, sortBy, priceRange, searchQuery]);
 
   const toggleWishlist = (productId) => {
-    setWishlist(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  };
+  setWishlist(prev => 
+    prev.includes(productId) 
+      ? prev.filter(id => id !== productId)
+      : [...prev, productId]
+  );
+};
+
 
   // Handle price range change
   const handlePriceRangeChange = (value, type) => {
@@ -127,18 +141,48 @@ const Products = () => {
   };
 
   const handleBuyNow = (product) => {
-    navigate(`/checkout/${product.id}`);
-  };
+  navigate('/orders', {
+    state: {
+      source: 'direct',
+      product: {
+        id: product.id || product._id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+      }
+    }
+  });
+};
 
-  const handleAddToCart = (product) => {
-    // Optionally add to cart logic here
+
+  const handleAddToCart = async (product) => {
+  try {
+    await addToCart(product.id, 1);
     navigate('/cart');
-  };
+  } catch (e) {
+    alert('Please login as a customer to add to cart.');
+    navigate('/login');
+  }
+};
 
-  const handleWishlist = (productId) => {
-    // Optionally add to wishlist logic here
-    navigate('/wishlist');
-  };
+const handleWishlist = async (product) => {
+  try {
+    // Use product._id for MongoDB documents
+    await addToWishlist(product._id || product.id);
+    toggleWishlist(product._id || product.id); // Update local state
+    // Don't navigate away, just show feedback
+    alert('Added to wishlist!');
+  } catch (e) {
+    console.error('Wishlist error:', e);
+    if (e.response?.status === 401) {
+      alert('Please login as a customer to add to wishlist.');
+      navigate('/login');
+    } else {
+      alert('Failed to add to wishlist. Please try again.');
+    }
+  }
+};
+
 
   // Close sidebar when clicking outside
   useEffect(() => {
@@ -196,10 +240,10 @@ const Products = () => {
             <span>Community Cart</span>
           </Link>
           
-          <Link to="/seller-dashboard" className="nav-item" onClick={() => setShowSidebar(false)}>
+          {/* <Link to="/seller-dashboard" className="nav-item" onClick={() => setShowSidebar(false)}>
             <Store size={20} />
             <span>Seller Hub</span>
-          </Link>
+          </Link> */}
           
           <Link to="/about" className="nav-item" onClick={() => setShowSidebar(false)}>
             <Info size={20} />
@@ -213,10 +257,24 @@ const Products = () => {
         </div>
         
         <div className="nav-actions">
-          <Link to="/login" className="nav-button login-btn" onClick={() => setShowSidebar(false)}>
-            <LogIn size={18} />
-            <span>Login</span>
-          </Link>
+           {isLoggedIn ? (
+           <button
+             className="nav-button login-btn"
+             onClick={() => { setShowSidebar(false); handleLogout(); }}
+          >
+             <LogIn size={18} />
+             <span>Logout</span>
+           </button>
+         ) : (
+           <Link
+             to="/login"
+             className="nav-button login-btn"
+             onClick={() => setShowSidebar(false)}
+           >
+             <LogIn size={18} />
+             <span>Login</span>
+           </Link>
+        )}
         </div>
       </nav>
 
@@ -445,18 +503,21 @@ const Products = () => {
                 >
                   {/* Product Image */}
                   <div className="product-image-container">
-                    <img 
-                      src={product.image || 'https://via.placeholder.com/400'} 
-                      alt={product.name} 
-                      className="product-image" 
-                      onError={(e) => { e.target.src = 'https://via.placeholder.com/400'; }}
-                    />
-                    <button 
-                      className={`wishlist-btn ${wishlist.includes(product.id) ? 'active' : ''}`}
-                      onClick={() => toggleWishlist(product.id)}
-                    >
-                      <Heart />
-                    </button>
+<img
+src={getFullImageUrl(product.image) || 'https://via.placeholder.com/400'}
+alt={product.name}
+className="product-image"
+onError={(e) => { e.target.src = 'https://via.placeholder.com/400'; }}
+/>
+                    
+<button 
+  className={`wishlist-btn ${wishlist.includes(product._id || product.id) ? 'active' : ''}`}
+  onClick={() => handleWishlist(product)} // Pass the full product object
+>
+  <Heart />
+</button>
+
+
                   </div>
 
                   {/* Product Info */}

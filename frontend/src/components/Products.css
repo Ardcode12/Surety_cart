@@ -1878,3 +1878,144 @@ a:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+/* ADD THESE STYLES FOR THE NEW PREMIUM PRODUCT CARD */
+
+.product-card-premium {
+  background-color: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.product-card-premium:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.card-image-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 100%; /* 1:1 Aspect Ratio */
+}
+
+.card-image-wrapper .product-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-image-wrapper .wishlist-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #555;
+}
+
+.card-image-wrapper .wishlist-btn:hover {
+  background-color: white;
+  transform: scale(1.1);
+}
+
+.card-image-wrapper .wishlist-btn.active {
+  color: #ef4444; /* Red for active wishlist */
+}
+.card-image-wrapper .wishlist-btn.active svg {
+  fill: #ef4444;
+}
+
+.card-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.seller-info {
+  font-size: 0.8rem;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.seller-info .verified-icon {
+  color: #3b82f6;
+}
+
+.product-title-premium {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111;
+  margin: 0;
+  line-height: 1.4;
+  flex-grow: 1;
+}
+
+.rating-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.rating-info .stars .filled {
+  color: #f59e0b; /* Amber/Gold color for stars */
+}
+.rating-info .review-count {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.price-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.price-info .current-price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111;
+}
+
+.add-to-cart-btn-premium {
+  width: 100%;
+  background: linear-gradient(95deg, #4f46e5, #7c3aed);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.add-to-cart-btn-premium:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+/* Stop rotation on the logo icon */
+.logo-icon {
+  animation: none !important;
+}

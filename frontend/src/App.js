@@ -1,11 +1,13 @@
+// frontend/src/App.js
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import HomePage from './components/Home'; // Make sure the filename is Home.jsx
+import HomePage from './components/Home';
 import Login from './components/Login';
 import SellerDashboard from './components/SellerDashboard';
 import Products from './components/Products';
-import Cart from './components/Cart'; // Add this import
-import Wishlist from './components/Wishlist'; // Add this import
+import Cart from './components/Cart';
+import Wishlist from './components/Wishlist';
+import Orders from './components/Orders';
 import './App.css';
 
 function App() {
@@ -13,75 +15,68 @@ function App() {
   const [userType, setUserType] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // This hook runs only once when the app loads
-  // It checks localStorage to see if the user is already logged in
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem('token');
-      const storedUserType = localStorage.getItem('userType');
-      
-      if (token && storedUserType) {
-        setIsAuthenticated(true);
-        setUserType(storedUserType);
-      }
-      setLoading(false); // Stop loading once the check is complete
-    };
-
-    checkAuth();
+    const token = localStorage.getItem('token');
+    const storedUserType = localStorage.getItem('userType');
+    if (token && storedUserType) {
+      setIsAuthenticated(true);
+      setUserType(storedUserType);
+    }
+    setLoading(false);
   }, []);
 
-  // Show a loading message while the initial authentication check is running
-  if (loading) {
-    return <div>Loading Application...</div>;
-  }
+  if (loading) return <div>Loading Application...</div>;
 
   return (
     <Router>
       <div className="App">
         <Routes>
-          {/* Home Route */}
-          {/* This is the main change: pass auth state and setters down as props */}
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
-              <HomePage 
-                isAuthenticated={isAuthenticated} 
-                userType={userType} 
+              <HomePage
+                isAuthenticated={isAuthenticated}
+                userType={userType}
                 setIsAuthenticated={setIsAuthenticated}
                 setUserType={setUserType}
               />
-            } 
+            }
           />
-          
-          {/* Login Route */}
-          {/* If the user is already authenticated, redirect them away from the login page */}
-          <Route 
-            path="/login" 
+
+          <Route
+            path="/login"
             element={
-              isAuthenticated ? 
-                <Navigate to={userType === 'seller' ? '/seller-dashboard' : '/'} replace /> : 
-                <Login setIsAuthenticated={setIsAuthenticated} setUserType={setUserType} />
-            } 
+              isAuthenticated
+                ? <Navigate to={userType === 'seller' ? '/seller-dashboard' : '/'} replace />
+                : <Login setIsAuthenticated={setIsAuthenticated} setUserType={setUserType} />
+            }
           />
-          
-          {/* Seller Dashboard (Protected Route) */}
-          {/* This route is only accessible if the user is an authenticated seller */}
-          <Route 
-            path="/seller-dashboard" 
+
+          <Route
+            path="/seller-dashboard"
             element={
-              isAuthenticated && userType === 'seller' ? 
-                <SellerDashboard setIsAuthenticated={setIsAuthenticated} setUserType={setUserType} /> : 
-                <Navigate to="/login" replace />
-            } 
+              isAuthenticated && userType === 'seller'
+                ? <SellerDashboard setIsAuthenticated={setIsAuthenticated} setUserType={setUserType} />
+                : <Navigate to="/login" replace />
+            }
           />
-          
-          {/* Public Routes */}
+
+          {/* Public routes */}
           <Route path="/products" element={<Products />} />
-          <Route path="/cart" element={<Cart />} /> {/* Add this route */}
-          <Route path="/wishlist" element={<Wishlist />} /> {/* Add this route */}
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+
+          {/* NEW: Orders route (customer protected) */}
+          <Route
+            path="/orders"
+            element={
+              isAuthenticated && userType === 'customer'
+                ? <Orders />
+                : <Navigate to="/login" replace />
+            }
+          />
+
           <Route path="/shop" element={<div>Shop Page - Coming Soon</div>} />
-          
-          {/* Catch-all route to redirect any unknown paths back to the home page */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

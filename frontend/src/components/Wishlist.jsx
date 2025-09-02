@@ -1,94 +1,115 @@
+// frontend/src/components/Wishlist.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import './Wishlist.css';
-import { 
-  Heart, ShoppingCart, Trash2, ArrowLeft, Star, Shield,
-  TrendingUp, Share2, Filter, Grid, List, Clock,
-  Package, CheckCircle, X, Info
+import {
+  Heart, ShoppingCart, ArrowLeft, Star, Shield,
+  TrendingUp, Share2, Filter, Grid, List, X
 } from 'lucide-react';
+
+import { getWishlist, removeFromWishlistApi, addToCart, getFullImageUrl } from '../services/api';
 
 const Wishlist = () => {
   const [wishlistItems, setWishlistItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('dateAdded');
   const [filterPrice, setFilterPrice] = useState('all');
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [movingAll, setMovingAll] = useState(false); // NEW: for “Move All to Cart” button
 
   useEffect(() => {
-    AOS.init({
-      duration: 800,
-      once: true,
-      easing: 'ease-out-cubic'
-    });
+    AOS.init({ duration: 800, once: true, easing: 'ease-out-cubic' });
     loadWishlistItems();
   }, []);
 
-  const loadWishlistItems = () => {
-    const sampleWishlist = [
-      {
-        id: 1,
-        title: "Premium Wireless Headphones",
-        seller: { name: "TechStore_Official", verified: true },
-        price: 2999,
-        originalPrice: 4999,
-        image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400",
-        rating: 4.5,
-        reviews: 234,
-        dateAdded: new Date('2024-01-15'),
-        inStock: true,
-        isProtected: true,
-        isTrending: true
-      },
-      {
-        id: 3,
-        title: "Smart Watch Series 6",
-        seller: { name: "GadgetZone", verified: true },
-        price: 12999,
-        originalPrice: 19999,
-        image: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400",
-        rating: 4.6,
-        reviews: 512,
-        dateAdded: new Date('2024-01-10'),
-        inStock: true,
-        isProtected: true
-      },
-      {
-        id: 5,
-        title: "Organic Skincare Set",
-        seller: { name: "BeautyNature", verified: false },
-        price: 1999,
-        originalPrice: 2999,
-        image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400",
-        rating: 4.2,
-        reviews: 178,
-        dateAdded: new Date('2024-01-20'),
-        inStock: false,
-        isProtected: true
+  const loadWishlistItems = async () => {
+    setIsLoading(true);
+    try {
+      const response = await getWishlist();
+      const items = (response.data || []).map(item => ({
+        ...item,
+        dateAdded: item.dateAdded ? new Date(item.dateAdded) : new Date()
+      }));
+      setWishlistItems(items);
+    } catch (error) {
+      console.error('Failed to load wishlist:', error);
+      setWishlistItems([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemoveFromWishlist = async (productId) => {
+    try {
+      await removeFromWishlistApi(productId);
+      setWishlistItems(items => items.filter(item => item._id !== productId));
+    } catch (error) {
+      console.error('Failed to remove from wishlist:', error);
+      alert('Could not remove item. Please try again.');
+    }
+  };
+
+  const moveToCart = async (item) => {
+    try {
+      await addToCart(item._id, 1);
+      await removeFromWishlistApi(item._id);
+      setWishlistItems(items => items.filter(i => i._id !== item._id));
+      alert(`${item.name} moved to cart!`);
+    } catch (error) {
+      console.error('Failed to move item to cart:', error);
+      alert('Please login as a customer to move items to cart.');
+    }
+  };
+
+  // NEW: Move All to Cart
+  const handleMoveAllToCart = async () => {
+    if (!wishlistItems.length) return;
+
+    // Optional auth guard
+    const userType = localStorage.getItem('userType');
+    if (userType !== 'customer') {
+      alert('Please login as a customer to move items to cart.');
+      return;
+    }
+
+    setMovingAll(true);
+    try {
+      // Add all to cart in parallel
+      const results = await Promise.allSettled(
+        wishlistItems.map(item => addToCart(item._id, 1))
+      );
+
+      // Collect successfully added productIds
+      const successIds = results
+        .map((res, idx) => (res.status === 'fulfilled' ? wishlistItems[idx]._id : null))
+        .filter(Boolean);
+
+      // Remove only those successfully added from wishlist
+      await Promise.allSettled(successIds.map(id => removeFromWishlistApi(id)));
+
+      // Update UI
+      setWishlistItems(items => items.filter(i => !successIds.includes(i._id)));
+
+      // Summary message
+      const successCount = successIds.length;
+      const failCount = wishlistItems.length - successCount;
+      if (successCount && !failCount) {
+        alert('All items moved to cart!');
+      } else if (successCount && failCount) {
+        alert(`${successCount} items moved to cart. ${failCount} failed.`);
+      } else {
+        alert('Could not move items to cart.');
       }
-    ];
-    setWishlistItems(sampleWishlist);
-  };
-
-  const removeFromWishlist = (id) => {
-    setWishlistItems(items => items.filter(item => item.id !== id));
-  };
-
-  const moveToCart = (item) => {
-    // Add to cart logic here
-    removeFromWishlist(item.id);
-  };
-
-  const moveAllToCart = () => {
-    // Add all items to cart logic here
-    setWishlistItems([]);
-  };
-
-  const shareWishlist = (item) => {
-    setSelectedItem(item);
-    setShowShareModal(true);
+    } catch (e) {
+      console.error('Move all to cart failed:', e);
+      alert('Could not move all items. Please try again.');
+    } finally {
+      setMovingAll(false);
+    }
   };
 
   const sortedItems = [...wishlistItems].sort((a, b) => {
@@ -97,10 +118,8 @@ const Wishlist = () => {
         return a.price - b.price;
       case 'priceHigh':
         return b.price - a.price;
-      case 'rating':
-        return b.rating - a.rating;
       default:
-        return b.dateAdded - a.dateAdded;
+        return new Date(b.dateAdded) - new Date(a.dateAdded);
     }
   });
 
@@ -111,6 +130,14 @@ const Wishlist = () => {
     if (filterPrice === 'above10k') return item.price >= 10000;
     return true;
   });
+
+  if (isLoading) {
+    return (
+      <div className="wishlist-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <div className="loading-spinner"></div>
+      </div>
+    );
+  }
 
   if (wishlistItems.length === 0) {
     return (
@@ -134,133 +161,99 @@ const Wishlist = () => {
 
   return (
     <div className="wishlist-page">
-      {/* Header */}
       <header className="wishlist-header" data-aos="fade-down">
         <div className="header-container">
           <Link to="/products" className="back-link">
             <ArrowLeft />
-            <span>Back to Shopping</span>
+            <span>Back to Products</span>
           </Link>
           <h1 className="wishlist-title">
             <Heart className="heart-filled" />
             My Wishlist ({wishlistItems.length})
           </h1>
           <button className="share-wishlist-btn" onClick={() => setShowShareModal(true)}>
-            <Share2 size={18} />
-            Share Wishlist
+            <Share2 size={16} />
+            Share
           </button>
         </div>
       </header>
 
-      {/* Stats Bar */}
       <div className="wishlist-stats" data-aos="fade-up">
-        <div className="stat-card" data-aos="zoom-in" data-aos-delay="100">
-          <div className="stat-icon">
-            <Package />
-          </div>
+        <div className="stat-card">
+          <div className="stat-icon"><Heart /></div>
           <div className="stat-info">
             <span className="stat-value">{wishlistItems.length}</span>
-            <span className="stat-label">Total Items</span>
+            <span className="stat-label">Items</span>
           </div>
         </div>
-        <div className="stat-card" data-aos="zoom-in" data-aos-delay="200">
-          <div className="stat-icon">
-            <CheckCircle />
-          </div>
+        <div className="stat-card">
+          <div className="stat-icon"><TrendingUp /></div>
           <div className="stat-info">
-            <span className="stat-value">{wishlistItems.filter(item => item.inStock).length}</span>
-            <span className="stat-label">In Stock</span>
-          </div>
-        </div>
-        <div className="stat-card" data-aos="zoom-in" data-aos-delay="300">
-          <div className="stat-icon">
-            <TrendingUp />
-          </div>
-          <div className="stat-info">
-            <span className="stat-value">
-              ₹{wishlistItems.reduce((sum, item) => sum + (item.originalPrice - item.price), 0).toLocaleString()}
-            </span>
-            <span className="stat-label">Total Savings</span>
+            <span className="stat-value">₹{wishlistItems.reduce((s, i) => s + (i.price || 0), 0).toLocaleString()}</span>
+            <span className="stat-label">Total Value</span>
           </div>
         </div>
       </div>
 
-      {/* Toolbar */}
       <div className="wishlist-toolbar" data-aos="fade-up">
         <div className="toolbar-left">
           <button
             className="move-all-btn"
-            onClick={moveAllToCart}
-            disabled={wishlistItems.length === 0}
+            onClick={handleMoveAllToCart}
+            disabled={movingAll || wishlistItems.length === 0}
           >
             <ShoppingCart size={16} />
-            Move All to Cart
+            {movingAll ? ' Moving...' : ' Move All to Cart'}
           </button>
         </div>
-
         <div className="toolbar-right">
           <div className="filter-dropdown">
             <Filter size={16} />
             <select value={filterPrice} onChange={(e) => setFilterPrice(e.target.value)}>
-              <option value="all">All Prices</option>
+              <option value="all">All</option>
               <option value="under5k">Under ₹5,000</option>
               <option value="5to10k">₹5,000 - ₹10,000</option>
               <option value="above10k">Above ₹10,000</option>
             </select>
           </div>
-
-          <div className="sort-dropdown">
+          <div className="filter-dropdown">
+            <Grid size={16} />
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
               <option value="dateAdded">Recently Added</option>
               <option value="priceLow">Price: Low to High</option>
               <option value="priceHigh">Price: High to Low</option>
-              <option value="rating">Highest Rated</option>
             </select>
           </div>
-
-          {/* FIXED VIEW BUTTONS */}
           <div className="view-toggle">
-            <button
-              className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-              onClick={() => setViewMode('grid')}
-            >
+            <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')}>
               <Grid size={16} />
             </button>
-            <button
-              className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
-              onClick={() => setViewMode('list')}
-            >
+            <button className={`view-btn ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}>
               <List size={16} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Wishlist Items */}
       <div className={`wishlist-container ${viewMode}`}>
         {filteredItems.map((item, index) => (
           <div
-            key={item.id}
+            key={item._id}
             className={`wishlist-item ${viewMode} ${!item.inStock ? 'out-of-stock' : ''}`}
             data-aos="fade-up"
             data-aos-delay={index * 50}
           >
             <div className="item-image-container">
-              <img src={item.image} alt={item.title} className="item-image" />
-              {item.isTrending && (
-                <div className="trending-badge">
-                  <TrendingUp size={12} />
-                  Trending
-                </div>
-              )}
-              {!item.inStock && (
-                <div className="stock-overlay">
-                  <span>Out of Stock</span>
-                </div>
-              )}
+              <img
+                src={getFullImageUrl(item.image)}
+                alt={item.name}
+                className="item-image"
+                onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/400'; }}
+              />
               <button
                 className="remove-wishlist-btn"
-                onClick={() => removeFromWishlist(item.id)}
+                onClick={() => handleRemoveFromWishlist(item._id)}
+                title="Remove from wishlist"
               >
                 <X size={16} />
               </button>
@@ -269,44 +262,19 @@ const Wishlist = () => {
             <div className="item-info">
               <div className="seller-row">
                 <span className="seller-name">
-                  {item.seller.name}
-                  {item.seller.verified && <Shield className="verified-badge" size={14} />}
+                  {item.seller?.name || 'Surity Seller'}
+                  {item.seller?.verified && <Shield className="verified-badge" size={14} />}
                 </span>
                 <span className="date-added">
-                  Added {Math.floor((new Date() - item.dateAdded) / (1000 * 60 * 60 * 24))} days ago
+                  Added {Math.floor((Date.now() - new Date(item.dateAdded)) / (1000 * 60 * 60 * 24))} days ago
                 </span>
               </div>
 
-              <h3 className="item-title">{item.title}</h3>
-
-              <div className="rating-row">
-                <div className="stars">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={i < Math.floor(item.rating) ? 'filled' : ''}
-                      size={14}
-                    />
-                  ))}
-                </div>
-                <span className="rating-text">{item.rating} ({item.reviews} reviews)</span>
-              </div>
+              <h3 className="item-title">{item.name}</h3>
 
               <div className="price-row">
-                <span className="current-price">₹{item.price.toLocaleString()}</span>
-                <span className="original-price">₹{item.originalPrice.toLocaleString()}</span>
-                <span className="discount">
-                  {Math.round((1 - item.price / item.originalPrice) * 100)}% OFF
-                </span>
+                <span className="current-price">₹{(item.price || 0).toLocaleString()}</span>
               </div>
-
-              {item.isProtected && (
-                <div className="protection-info">
-                  <Shield size={14} />
-                  <span>SuretyCard Protected</span>
-                  <Info size={14} className="info-icon" />
-                </div>
-              )}
 
               <div className="item-actions">
                 <button
@@ -315,12 +283,9 @@ const Wishlist = () => {
                   disabled={!item.inStock}
                 >
                   <ShoppingCart size={16} />
-                  {item.inStock ? 'Move to Cart' : 'Notify Me'}
+                  {item.inStock ? 'Move to Cart' : 'Out of Stock'}
                 </button>
-                <button
-                  className="share-btn"
-                  onClick={() => shareWishlist(item)}
-                >
+                <button className="share-btn" onClick={() => { setSelectedItem(item); setShowShareModal(true); }}>
                   <Share2 size={16} />
                 </button>
               </div>
@@ -329,52 +294,27 @@ const Wishlist = () => {
         ))}
       </div>
 
-      {/* Share Modal */}
       {showShareModal && (
         <div className="share-modal-overlay" onClick={() => setShowShareModal(false)}>
-          <div className="share-modal" onClick={e => e.stopPropagation()} data-aos="zoom-in">
+          <div className="share-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Share {selectedItem ? 'Item' : 'Wishlist'}</h3>
+              <h3>Share Wishlist Item</h3>
               <button className="close-modal" onClick={() => setShowShareModal(false)}>
-                <X />
+                <X size={16} />
               </button>
             </div>
             <div className="modal-body">
-              <p>Share your {selectedItem ? 'favorite item' : 'wishlist'} with friends and family</p>
+              <p>Share: {selectedItem?.name}</p>
               <div className="share-options">
-                <button className="share-option whatsapp">
-                  <img src="https://img.icons8.com/color/48/000000/whatsapp.png" alt="WhatsApp" />
-                  WhatsApp
-                </button>
-                <button className="share-option facebook">
-                  <img src="https://img.icons8.com/color/48/000000/facebook-new.png" alt="Facebook" />
-                  Facebook
-                </button>
-                <button className="share-option twitter">
-                  <img src="https://img.icons8.com/color/48/000000/twitter.png" alt="Twitter" />
-                  Twitter
-                </button>
-                <button className="share-option copy-link">
-                  <img src="https://img.icons8.com/color/48/000000/link.png" alt="Copy Link" />
-                  Copy Link
-                </button>
+                <button className="share-option whatsapp">WhatsApp</button>
+                <button className="share-option facebook">Facebook</button>
+                <button className="share-option twitter">Twitter</button>
+                <button className="share-option copy-link">Copy Link</button>
               </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* Price Drop Alert */}
-      <div className="price-alert-section" data-aos="fade-up">
-        <div className="alert-content">
-          <Clock className="alert-icon" />
-          <div className="alert-text">
-            <h4>Get Price Drop Alerts</h4>
-            <p>We'll notify you when prices drop on your wishlist items</p>
-          </div>
-          <button className="enable-alerts-btn">Enable Alerts</button>
-        </div>
-      </div>
     </div>
   );
 };

@@ -1,19 +1,35 @@
+// frontend/src/components/Cart.jsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { createPortal } from 'react-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import './Cart.css';
 import {
   ShoppingCart, Trash2, Plus, Minus, Shield,
   ArrowLeft, Tag, Truck, ChevronRight,
-  Package, Clock, Award, Heart, X
+  Package, Clock, Award, X
 } from 'lucide-react';
+import {
+  getCart,
+  removeFromCart,
+  clearCart,
+  placeOrderFromCart,
+  getFullImageUrl
+} from '../services/api';
 
 const Cart = () => {
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [couponCode, setCouponCode] = useState('');
   const [showCouponInput, setShowCouponInput] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+
+  // Checkout modal state
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('card'); // 'card' | 'upi' | 'cod'
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     AOS.init({
@@ -24,47 +40,49 @@ const Cart = () => {
     loadCartItems();
   }, []);
 
-  const loadCartItems = () => {
-    const sampleCart = [
-      {
-        id: 1,
-        title: "Premium Wireless Headphones",
-        seller: { name: "TechStore_Official", verified: true },
-        price: 2999,
-        originalPrice: 4999,
-        image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400",
-        quantity: 1,
-        isProtected: true
-      },
-      {
-        id: 2,
-        title: "Designer Leather Handbag",
-        seller: { name: "FashionHub", verified: true },
-        price: 3499,
-        originalPrice: 6999,
-        image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400",
-        quantity: 2,
-        isProtected: true
-      }
-    ];
-    setCartItems(sampleCart);
+  // Lock page scroll when modal open
+  useEffect(() => {
+    if (showCheckout) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showCheckout]);
+
+  const loadCartItems = async () => {
+    setIsLoading(true);
+    try {
+      const response = await getCart();
+      setCartItems(response.data);
+    } catch (error) {
+      console.error("Failed to fetch cart items:", error);
+      setCartItems([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const removeItem = async (productId) => {
+    try {
+      await removeFromCart(productId);
+      setCartItems(prevItems => prevItems.filter(item => item.product._id !== productId));
+    } catch (error) {
+      console.error("Failed to remove item:", error);
+      alert("Could not remove item. Please try again.");
+    }
   };
 
   const updateQuantity = (id, newQuantity) => {
     if (newQuantity < 1) return;
     setCartItems(items =>
       items.map(item =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
+        item.product._id === id ? { ...item, quantity: newQuantity } : item
       )
     );
-  };
-
-  const removeItem = (id) => {
-    setCartItems(items => items.filter(item => item.id !== id));
-  };
-
-  const moveToWishlist = (item) => {
-    removeItem(item.id);
+    // Optional: persist quantity to server if you add a PUT /cart/:productId route
   };
 
   const applyCoupon = () => {
@@ -72,13 +90,45 @@ const Cart = () => {
       setAppliedCoupon({ code: 'SAVE20', discount: 20 });
     } else if (couponCode === 'FIRST50') {
       setAppliedCoupon({ code: 'FIRST50', discount: 50 });
+    } else {
+      alert("Invalid coupon code.");
     }
   };
 
-  const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const subtotal = cartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0);
   const discount = appliedCoupon ? (subtotal * appliedCoupon.discount / 100) : 0;
   const delivery = subtotal > 1000 ? 0 : 99;
   const total = subtotal - discount + delivery;
+
+  const handleCheckout = () => {
+    navigate('/orders', { state: { source: 'cart' } });
+  };
+
+  const handleConfirmPayment = async () => {
+    try {
+      setProcessing(true);
+      // Simulate payment delay
+      setTimeout(async () => {
+        await placeOrderFromCart({ method: paymentMethod, status: paymentMethod === 'cod' ? 'pending' : 'paid' });
+        setProcessing(false);
+        setShowCheckout(false);
+        setCartItems([]); // Clear UI cart
+        alert('Payment successful! Your order has been placed.');
+      }, 1200);
+    } catch (e) {
+      setProcessing(false);
+      console.error('Checkout failed:', e);
+      alert('Payment failed. Please try again.');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="cart-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <div className="loading-spinner"></div>
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -137,7 +187,19 @@ const Cart = () => {
         <div className="cart-items-section">
           <div className="section-header" data-aos="fade-right">
             <h2>Cart Items</h2>
-            <button className="clear-cart-btn" onClick={() => setCartItems([])}>
+            <button
+              className="clear-cart-btn"
+              onClick={async () => {
+                try {
+                  const resp = await clearCart();
+                  // console.log('Clear cart response:', resp.data);
+                  await loadCartItems(); // refresh from server
+                } catch (e) {
+                  console.error('Failed to clear cart:', e?.response?.data || e.message);
+                  alert(e?.response?.data?.message || 'Could not clear cart. Please try again.');
+                }
+              }}
+            >
               Clear Cart
             </button>
           </div>
@@ -145,58 +207,48 @@ const Cart = () => {
           <div className="cart-items">
             {cartItems.map((item, index) => (
               <div
-                key={item.id}
+                key={item.product._id}
                 className="cart-item"
                 data-aos="fade-up"
                 data-aos-delay={index * 100}
               >
                 <div className="item-image">
-                  <img src={item.image} alt={item.title} />
-                  {item.isProtected && (
-                    <div className="protection-badge">
-                      <Shield size={12} />
-                    </div>
-                  )}
+                  <img
+                    src={getFullImageUrl(item.product.image)}
+                    alt={item.product.name}
+                    onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/400'; }}
+                  />
                 </div>
 
                 <div className="item-details">
-                  <h3>{item.title}</h3>
+                  <h3>{item.product.name}</h3>
                   <div className="seller-info">
-                    <span>{item.seller.name}</span>
-                    {item.seller.verified && <Shield className="verified-icon" size={14} />}
+                    <span>{item.product.seller?.name || 'Surity Seller'}</span>
+                    {item.product.seller?.verified && <Shield className="verified-icon" size={14} />}
                   </div>
 
                   <div className="price-info">
-                    <span className="current-price">₹{item.price.toLocaleString()}</span>
-                    <span className="original-price">₹{item.originalPrice.toLocaleString()}</span>
-                    <span className="discount">{Math.round((1 - item.price / item.originalPrice) * 100)}% OFF</span>
+                    <span className="current-price">₹{item.product.price.toLocaleString()}</span>
                   </div>
 
                   <div className="item-actions">
                     <div className="quantity-controls">
-                      <button onClick={() => updateQuantity(item.id, item.quantity - 1)}>
+                      <button onClick={() => updateQuantity(item.product._id, item.quantity - 1)}>
                         <Minus size={16} />
                       </button>
                       <span className="quantity">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, item.quantity + 1)}>
+                      <button onClick={() => updateQuantity(item.product._id, item.quantity + 1)}>
                         <Plus size={16} />
                       </button>
                     </div>
-
-                    <button className="move-to-wishlist" onClick={() => moveToWishlist(item)}>
-                      <Heart size={16} />
-                      Move to Wishlist
-                    </button>
-
-                    <button className="remove-btn" onClick={() => removeItem(item.id)}>
-                      <Trash2 size={16} />
-                      Remove
+                    <button className="remove-btn" onClick={() => removeItem(item.product._id)}>
+                      <Trash2 size={16} /> Remove
                     </button>
                   </div>
                 </div>
 
                 <div className="item-total">
-                  ₹{(item.price * item.quantity).toLocaleString()}
+                  ₹{(item.product.price * item.quantity).toLocaleString()}
                 </div>
               </div>
             ))}
@@ -298,7 +350,7 @@ const Cart = () => {
             <span>Estimated delivery in 3-5 business days</span>
           </div>
 
-          <button className="checkout-btn">
+          <button className="checkout-btn" onClick={handleCheckout}>
             <Package size={18} />
             Proceed to Checkout
           </button>
@@ -314,6 +366,72 @@ const Cart = () => {
           </div>
         </div>
       </div>
+
+      {/* Fake Payment Modal (via Portal) */}
+      {showCheckout && createPortal(
+        <div className="checkout-modal-overlay" onClick={() => !processing && setShowCheckout(false)}>
+          <div className="checkout-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Complete Payment</h3>
+              <button className="close-modal" onClick={() => !processing && setShowCheckout(false)} disabled={processing}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="order-summary-mini">
+                <div className="row"><span>Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
+                {appliedCoupon && (
+                  <div className="row"><span>Discount ({appliedCoupon.code})</span><span>-₹{discount.toLocaleString()}</span></div>
+                )}
+                <div className="row"><span>Delivery</span><span>{delivery === 0 ? 'FREE' : `₹${delivery}`}</span></div>
+                <div className="row total"><span>Total</span><span>₹{total.toLocaleString()}</span></div>
+              </div>
+
+              <div className="payment-methods-group">
+                <label className={`pay-option ${paymentMethod === 'card' ? 'active' : ''}`}>
+                  <input
+                    type="radio"
+                    name="pay"
+                    value="card"
+                    checked={paymentMethod === 'card'}
+                    onChange={() => setPaymentMethod('card')}
+                    disabled={processing}
+                  />
+                  <span>Card (Visa/Mastercard)</span>
+                </label>
+                <label className={`pay-option ${paymentMethod === 'upi' ? 'active' : ''}`}>
+                  <input
+                    type="radio"
+                    name="pay"
+                    value="upi"
+                    checked={paymentMethod === 'upi'}
+                    onChange={() => setPaymentMethod('upi')}
+                    disabled={processing}
+                  />
+                  <span>UPI (GPay/PhonePe)</span>
+                </label>
+                <label className={`pay-option ${paymentMethod === 'cod' ? 'active' : ''}`}>
+                  <input
+                    type="radio"
+                    name="pay"
+                    value="cod"
+                    checked={paymentMethod === 'cod'}
+                    onChange={() => setPaymentMethod('cod')}
+                    disabled={processing}
+                  />
+                  <span>Cash on Delivery</span>
+                </label>
+              </div>
+
+              <button className="confirm-payment-btn" onClick={handleConfirmPayment} disabled={processing}>
+                {processing ? 'Processing...' : `Pay ₹${total.toLocaleString()}`}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

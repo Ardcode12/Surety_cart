@@ -1,7 +1,6 @@
+// frontend/src/services/api.js
 import axios from 'axios';
 
-// Define the base URL of your backend server
-// For production, it's best to use an environment variable like process.env.REACT_APP_API_URL
 const API_URL = 'http://localhost:5000';
 
 // --- Axios Instances ---
@@ -13,6 +12,14 @@ const productAPI = axios.create({
   baseURL: `${API_URL}/api/products`,
 });
 
+const featuresAPI = axios.create({
+  baseURL: `${API_URL}/api/features`,
+});
+
+const ordersAPI = axios.create({
+  baseURL: `${API_URL}/api/orders`,
+});
+
 // Helper function to get full image URL
 const getFullImageUrl = (imagePath) => {
   if (!imagePath) return '/placeholder-image.jpg';
@@ -20,19 +27,22 @@ const getFullImageUrl = (imagePath) => {
   return `${API_URL}${imagePath}`;
 };
 
-// --- Interceptor to add JWT token to protected product routes ---
-productAPI.interceptors.request.use((req) => {
+// --- Interceptor to add JWT token ---
+const addAuthToken = (req) => {
   const token = localStorage.getItem('token');
   if (token) {
     req.headers.Authorization = `Bearer ${token}`;
   }
   return req;
-});
+};
+
+productAPI.interceptors.request.use(addAuthToken);
+featuresAPI.interceptors.request.use(addAuthToken);
+ordersAPI.interceptors.request.use(addAuthToken);
 
 // =================================================================
 // AUTHENTICATION API CALLS
 // =================================================================
-
 export const signupCustomer = (data) => authAPI.post('/customer/signup', data);
 export const loginCustomer = (data) => authAPI.post('/customer/login', data);
 export const signupSeller = (data) => authAPI.post('/seller/signup', data);
@@ -41,63 +51,50 @@ export const loginSeller = (data) => authAPI.post('/seller/login', data);
 // =================================================================
 // PRODUCT MANAGEMENT API CALLS
 // =================================================================
-
-/**
- * Fetches ALL products for the public-facing pages.
- */
 export const fetchAllProducts = async () => {
-  try {
-    const response = await productAPI.get('/');
-    const productsWithFullUrls = response.data.map((product) => ({
-      ...product,
-      image: getFullImageUrl(product.image),
-    }));
-    return { data: productsWithFullUrls };
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    throw error;
-  }
+  const response = await productAPI.get('/');
+  return { data: response.data };
 };
 
-/**
- * Fetches only the products belonging to the currently logged-in seller.
- */
-export const fetchMyProducts = async () => {
-  try {
-    const response = await productAPI.get('/my-products');
-    const productsWithFullUrls = response.data.map((product) => ({
-      ...product,
-      image: getFullImageUrl(product.image),
-    }));
-    return { data: productsWithFullUrls };
-  } catch (error) {
-    console.error('Error fetching seller products:', error);
-    throw error;
-  }
-};
-
-/**
- * Adds a new product. (For the Seller Dashboard)
- * @param {FormData} productData - The product data, including the image file.
- */
-// Removed manual headers - Axios sets them automatically for FormData
+export const fetchMyProducts = () => productAPI.get('/my-products');
 export const addProduct = (productData) => productAPI.post('/', productData);
-
-/**
- * Deletes a product by its ID. (For the Seller Dashboard)
- * @param {string} productId - The ID of the product to delete.
- */
 export const deleteProduct = (productId) => productAPI.delete(`/${productId}`);
+export const updateProduct = (productId, updatedData) => productAPI.put(`/${productId}`, updatedData);
 
-/**
- * Updates an existing product. (For Seller Dashboard "Edit" functionality)
- * @param {string} productId - The ID of the product to update.
- * @param {FormData} updatedData - The new product data.
- */
-// Removed manual headers - Axios sets them automatically for FormData
-export const updateProduct = (productId, updatedData) =>
-  productAPI.put(`/${productId}`, updatedData);
+// =================================================================
+// CART, WISHLIST, PROFILE, AND ORDERS API CALLS
+// =================================================================
+// Cart
+export const getCart = () => featuresAPI.get('/cart');
+export const addToCart = (productId, quantity = 1) => featuresAPI.post('/cart', { productId, quantity });
+export const removeFromCart = (productId) => featuresAPI.delete(`/cart/${productId}`);
+export const clearCart = () => featuresAPI.delete('/cart');
+
+// Wishlist
+export const getWishlist = () => featuresAPI.get('/wishlist');
+export const addToWishlist = (productId) => featuresAPI.post('/wishlist', { productId });
+export const removeFromWishlistApi = (productId) => featuresAPI.delete(`/wishlist/${productId}`);
+
+// Seller Profile
+export const getSellerProfile = () => featuresAPI.get('/seller-profile');
+export const updateSellerProfile = (profileData) => featuresAPI.post('/seller-profile', profileData);
+
+// Orders
+export const placeOrderFromCart = (payment) =>
+  ordersAPI.post('/', { source: 'cart', payment });
+
+export const placeDirectOrder = ({ productId, qty = 1, payment, shippingAddress }) =>
+  ordersAPI.post('/', {
+    source: 'direct',
+    items: [{ productId, qty }],
+    payment,
+    shippingAddress,
+  });
+// Cancel an order (customer)
+export const cancelMyOrder = (orderId) => ordersAPI.put(`/${orderId}/cancel`);
+
+export const getMyOrders = () => ordersAPI.get('/my');
 
 
-// Export the helper function
+// Export the helper
 export { getFullImageUrl };
