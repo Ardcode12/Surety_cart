@@ -1,118 +1,139 @@
 // frontend/src/services/api.js
-import axios from 'axios';
+import axios from "axios";
 
-const API_URL = 'http://localhost:5000';
+// =============================
+// 1. Set API Base URL Dynamically
+// =============================
+const API_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// --- Axios Instances ---
-const authAPI = axios.create({ baseURL: `${API_URL}/api/auth` });
-const productAPI = axios.create({ baseURL: `${API_URL}/api/products` });
-const featuresAPI = axios.create({ baseURL: `${API_URL}/api/features` });
-const ordersAPI = axios.create({ baseURL: `${API_URL}/api/orders` });
+// Create a single axios instance
+const api = axios.create({
+  baseURL: `${API_URL}/api`,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
-// Normalize and build full image URL
-const getFullImageUrl = (imagePath) => {
-  if (!imagePath) return '/placeholder-image.jpg';
+// =============================
+// 2. Interceptor to Attach JWT Token
+// =============================
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// =============================
+// 3. Utility: Build Full Image URL
+// =============================
+export const getFullImageUrl = (imagePath) => {
+  if (!imagePath) return "/placeholder-image.jpg";
   let p = String(imagePath).trim();
 
-  // Fix Windows backslashes
-  p = p.replace(/\\/g, '/');
+  // Replace Windows-style backslashes
+  p = p.replace(/\\/g, "/");
 
-  // If full URL, return as is
+  // If it's already a full URL, return as is
   if (/^https?:\/\//i.test(p)) return p;
 
-  // Ensure it starts with /uploads
-  if (!p.startsWith('/')) p = `/${p}`;
-  // In case someone stored '/backend/uploads/...'
-  p = p.replace(/^\/backend/, '');
+  // Remove unwanted '/backend' prefix if added accidentally
+  p = p.replace(/^\/backend/, "");
+
+  // Ensure it starts with '/'
+  if (!p.startsWith("/")) p = `/${p}`;
 
   return `${API_URL}${p}`;
 };
 
-// --- Interceptor to add JWT token ---
-const addAuthToken = (req) => {
-  const token = localStorage.getItem('token');
-  if (token) req.headers.Authorization = `Bearer ${token}`;
-  return req;
-};
+// =============================
+// 4. AUTH APIs
+// =============================
+export const signupCustomer = (data) => api.post("/auth/customer/signup", data);
+export const loginCustomer = (data) => api.post("/auth/customer/login", data);
+export const signupSeller = (data) => api.post("/auth/seller/signup", data);
+export const loginSeller = (data) => api.post("/auth/seller/login", data);
 
-productAPI.interceptors.request.use(addAuthToken);
-featuresAPI.interceptors.request.use(addAuthToken);
-ordersAPI.interceptors.request.use(addAuthToken);
-
-// =================================================================
-// AUTH
-// =================================================================
-export const signupCustomer = (data) => authAPI.post('/customer/signup', data);
-export const loginCustomer = (data) => authAPI.post('/customer/login', data);
-export const signupSeller = (data) => authAPI.post('/seller/signup', data);
-export const loginSeller = (data) => authAPI.post('/seller/login', data);
-
-// =================================================================
-// PRODUCTS
-// =================================================================
+// =============================
+// 5. PRODUCT APIs
+// =============================
 export const fetchAllProducts = async () => {
-  const response = await productAPI.get('/');
+  const response = await api.get("/products");
   return { data: response.data };
 };
 
-export const fetchMyProducts = () => productAPI.get('/my-products');
+export const fetchMyProducts = () => api.get("/products/my-products");
 
-// Force multipart for add/update with files
 export const addProduct = (productFormData) =>
-  productAPI.post('/', productFormData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  api.post("/products", productFormData, {
+    headers: { "Content-Type": "multipart/form-data" },
   });
 
-export const deleteProduct = (productId) => productAPI.delete(`/${productId}`);
+export const deleteProduct = (productId) =>
+  api.delete(`/products/${productId}`);
 
 export const updateProduct = (productId, updatedDataOrFormData) =>
-  productAPI.put(`/${productId}`, updatedDataOrFormData, {
+  api.put(`/products/${productId}`, updatedDataOrFormData, {
     headers:
       updatedDataOrFormData instanceof FormData
-        ? { 'Content-Type': 'multipart/form-data' }
+        ? { "Content-Type": "multipart/form-data" }
         : undefined,
   });
 
-// =================================================================
-// CART, WISHLIST, PROFILE, ORDERS
-// =================================================================
-export const getCart = () => featuresAPI.get('/cart');
-export const addToCart = (productId, quantity = 1) => featuresAPI.post('/cart', { productId, quantity });
-export const removeFromCart = (productId) => featuresAPI.delete(`/cart/${productId}`);
-export const clearCart = () => featuresAPI.delete('/cart');
+// =============================
+// 6. CART, WISHLIST, PROFILE, ORDERS
+// =============================
 
-export const getWishlist = () => featuresAPI.get('/wishlist');
-export const addToWishlist = (productId) => featuresAPI.post('/wishlist', { productId });
-export const removeFromWishlistApi = (productId) => featuresAPI.delete(`/wishlist/${productId}`);
+// Cart APIs
+export const getCart = () => api.get("/features/cart");
+export const addToCart = (productId, quantity = 1) =>
+  api.post("/features/cart", { productId, quantity });
+export const removeFromCart = (productId) =>
+  api.delete(`/features/cart/${productId}`);
+export const clearCart = () => api.delete("/features/cart");
 
-// Seller Profile
-export const getSellerProfile = () => featuresAPI.get('/seller-profile');
-export const updateSellerProfile = (profileData) => featuresAPI.post('/seller-profile', profileData);
+// Wishlist APIs
+export const getWishlist = () => api.get("/features/wishlist");
+export const addToWishlist = (productId) =>
+  api.post("/features/wishlist", { productId });
+export const removeFromWishlistApi = (productId) =>
+  api.delete(`/features/wishlist/${productId}`);
 
-// Logo upload (multipart)
+// Seller Profile APIs
+export const getSellerProfile = () => api.get("/features/seller-profile");
+export const updateSellerProfile = (profileData) =>
+  api.post("/features/seller-profile", profileData);
+
 export const uploadSellerLogo = (formData) =>
-  featuresAPI.post('/seller-profile/logo', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  api.post("/features/seller-profile/logo", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
   });
 
-// Orders
+// Orders APIs
 export const placeOrderFromCart = (payment) =>
-  ordersAPI.post('/', { source: 'cart', payment });
+  api.post("/orders", { source: "cart", payment });
 
-export const placeDirectOrder = ({ productId, qty = 1, payment, shippingAddress }) =>
-  ordersAPI.post('/', {
-    source: 'direct',
+export const placeDirectOrder = ({
+  productId,
+  qty = 1,
+  payment,
+  shippingAddress,
+}) =>
+  api.post("/orders", {
+    source: "direct",
     items: [{ productId, qty }],
     payment,
     shippingAddress,
   });
 
-export const cancelMyOrder = (orderId) => ordersAPI.put(`/${orderId}/cancel`);
-export const getMyOrders = () => ordersAPI.get('/my');
+export const cancelMyOrder = (orderId) =>
+  api.put(`/orders/${orderId}/cancel`);
 
-// Seller orders
-export const getSellerOrders = () => ordersAPI.get('/seller');
-export const updateOrderStatus = (orderId, status) => ordersAPI.put(`/${orderId}/status`, { status });
+export const getMyOrders = () => api.get("/orders/my");
 
-// Export helper
-export { getFullImageUrl };
+// Seller Orders
+export const getSellerOrders = () => api.get("/orders/seller");
+export const updateOrderStatus = (orderId, status) =>
+  api.put(`/orders/${orderId}/status`, { status });
