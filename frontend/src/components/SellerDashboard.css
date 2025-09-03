@@ -233,9 +233,10 @@ body {
   font-size: 1.2rem;
   font-weight: 700;
   color: white;
-  margin-bottom: 4px;
+  margin: 0 auto 4px;      /* centers the block */
+  display: inline-block;   /* shrink to text width so auto margins work */
+  text-align: center;
 }
-
 .seller-username {
   color: rgba(255, 255, 255, 0.6);
   font-size: 0.9rem;
@@ -2490,12 +2491,14 @@ input:checked + .toggle-slider:before {
 }
 
 /* Action buttons at the bottom of the form */
-.form-actions {
-    display: flex;
-    gap: 16px;
-    margin-top: 24px;
-    justify-content: flex-end; /* Align buttons to the right */
+/* Only for Add Product modal */
+.product-add-form .form-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+  justify-content: flex-end;
 }
+
 
 /* Primary "Create Product" button */
 .btn-primary {
@@ -2533,4 +2536,209 @@ input:checked + .toggle-slider:before {
 .btn-secondary:hover {
     background: var(--surface-hover);
     border-color: var(--primary-light);
+}
+/* Center the seller name ("Arnald") and related info in the sidebar card */
+.premium-sidebar .seller-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;    /* centers children horizontally */
+  text-align: center;     /* centers text inside */
+}
+
+.premium-sidebar .seller-card .seller-avatar {
+  margin: 0 auto;
+}
+
+.premium-sidebar .seller-card .seller-name,
+.premium-sidebar .seller-card .seller-username {
+  width: 100%;
+  text-align: center;
+  margin: 4px 0;
+}
+
+.premium-sidebar .seller-card .seller-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.premium-sidebar .seller-card .seller-metrics {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+/* Force center in the sidebar card */
+aside.premium-sidebar .seller-card .seller-name {
+  display: inline-block !important;
+  margin: 0 auto 4px !important;
+  text-align: center !important;
+}
+/* ============= Orders view dark overrides ============= */
+/* Put this at the very end of SellerDashboard.css */
+
+.orders-view {
+  background: transparent !important;
+}
+
+/* Container and table backgrounds */
+.orders-table-container {
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.orders-table-container .premium-table {
+  background: var(--surface) !important;
+}
+
+.premium-table thead {
+  background: var(--surface-hover) !important;
+}
+
+.premium-table th {
+  color: var(--text-secondary) !important;
+}
+
+/* Row backgrounds */
+.premium-table tbody tr {
+  background: var(--surface) !important;
+}
+
+.premium-table tbody tr:hover {
+  background: var(--surface-hover) !important;
+}
+
+/* Cells */
+.premium-table td {
+  color: var(--text-primary) !important;
+}
+
+/* Tabs bar and active tab */
+.order-tabs {
+  background: var(--surface) !important;
+  border: 1px solid var(--border-color);
+}
+
+.order-tabs .tab {
+  color: var(--text-secondary) !important;
+}
+
+.order-tabs .tab.active {
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Pills and chips */
+.payment-badge {
+  background: var(--surface-hover) !important;
+  color: var(--text-secondary) !important;
+}
+
+.status-badge {
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Optional: table header separator color */
+.premium-table tbody tr {
+  border-bottom: 1px solid var(--border-light) !important;
+}
+/* Profile form actions (styles for save-btn / cancel-btn) */
+.profile-view .form-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.profile-view .save-btn {
+  background: var(--primary-gradient);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition);
+}
+
+.profile-view .save-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.profile-view .cancel-btn {
+  background: transparent;
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.profile-view .cancel-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--primary-light);
+}
+/* Center + style Profile view action buttons */
+.profile-view .form-actions {
+  display: flex !important;
+  justify-content: center !important;   /* center horizontally */
+  gap: 16px !important;
+  margin-top: 24px !important;
+}
+
+/* Style both naming variants: (save-btn/cancel-btn) and (btn-primary/btn-secondary) */
+.profile-view .form-actions .btn-primary,
+.profile-view .form-actions .save-btn {
+  min-width: 160px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  background: var(--primary-gradient);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition);
+}
+
+.profile-view .form-actions .btn-primary:hover,
+.profile-view .form-actions .save-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.profile-view .form-actions .btn-secondary,
+.profile-view .form-actions .cancel-btn {
+  min-width: 160px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+  transition: var(--transition);
+}
+
+.profile-view .form-actions .btn-secondary:hover,
+.profile-view .form-actions .cancel-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--primary-light);
+}
+/* Only for Add Product modal */
+.product-add-form .form-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+  justify-content: flex-end;
+}
+profile-view .form-actions {
+display: flex !important;
+justify-content: flex-end !important;
+gap: 16px !important;
+margin-top: 24px !important;
 }

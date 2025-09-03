@@ -1,5 +1,8 @@
 // backend/routes/featuresRoutes.js
 const express = require("express");
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
 const Product = require("../models/Product");
 const Cart = require("../models/Cart");
 const Wishlist = require("../models/wishlist/Wishlist");
@@ -8,13 +11,45 @@ const { protectCustomer, protectSeller } = require("../middleware/authMiddleware
 
 const router = express.Router();
 
+/* =========================
+   Helpers
+   ========================= */
+
+// Normalize any stored image path to a web-safe path like: /uploads/<filename>
+const toWebUploadPath = (p) => {
+  if (!p) return null;
+  try {
+    const clean = String(p).replace(/\\/g, "/"); // fix Windows backslashes
+    const filename = path.basename(clean); // just the file name
+    return `/uploads/${filename}`;
+  } catch {
+    return null;
+  }
+};
+
 const shapeProduct = (p) => ({
   _id: p._id,
   name: p.name,
   price: p.price,
-  image: p.image || null, // relative path (/uploads/...)
+  image: toWebUploadPath(p.image), // always normalize to /uploads/<file>
   seller: p.seller || null,
 });
+
+/* =========================
+   Multer for profile logo
+   ========================= */
+const uploadsDir = path.join(__dirname, "..", "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname || "");
+    cb(null, `image-${Date.now()}${ext || ".jpg"}`);
+  },
+});
+const upload = multer({ storage });
 
 /* =========================
    CART
@@ -126,7 +161,7 @@ router.get("/wishlist", protectCustomer, async (req, res) => {
         _id: p._id,
         name: p.name,
         price: p.price,
-        image: p.image || null,
+        image: toWebUploadPath(p.image),
         seller: p.seller || null,
         inStock: true,
         dateAdded: addedAt,
@@ -164,10 +199,6 @@ router.post("/wishlist", protectCustomer, async (req, res) => {
 });
 
 // DELETE /api/features/wishlist/:productId
-// backend/routes/featuresRoutes.js (only the clear-cart route)
-// backend/routes/featuresRoutes.js
-
-// DELETE /api/features/wishlist/:productId
 router.delete("/wishlist/:productId", protectCustomer, async (req, res) => {
   try {
     const { productId } = req.params;
@@ -183,21 +214,29 @@ router.delete("/wishlist/:productId", protectCustomer, async (req, res) => {
   }
 });
 
-
 /* =========================
-   SELLER PROFILE
+   SELLER PROFILE (with logo upload)
    ========================= */
 
 // GET /api/features/seller-profile
 router.get("/seller-profile", protectSeller, async (req, res) => {
   try {
-    let profile = await SellerProfile.findOne({ seller: req.seller._id });
+    // Use lean to get plain object, then normalize image paths
+    let profile = await SellerProfile.findOne({ seller: req.seller._id }).lean();
+
     if (!profile) {
-      profile = await SellerProfile.create({
+      const created = await SellerProfile.create({
         seller: req.seller._id,
         storeName: req.seller.businessName,
       });
+      profile = created.toObject();
     }
+
+    // Normalize logo path for frontend
+    if (profile.logo) {
+      profile.logo = toWebUploadPath(profile.logo);
+    }
+
     res.json(profile);
   } catch (err) {
     console.error("GET /seller-profile error:", err);
@@ -209,15 +248,41 @@ router.get("/seller-profile", protectSeller, async (req, res) => {
 router.post("/seller-profile", protectSeller, async (req, res) => {
   try {
     const update = req.body || {};
-    const profile = await SellerProfile.findOneAndUpdate(
+    const updatedDoc = await SellerProfile.findOneAndUpdate(
       { seller: req.seller._id },
       { $set: update },
       { new: true, upsert: true }
-    );
-    res.json(profile);
+    ).lean();
+
+    // Normalize logo if present
+    if (updatedDoc.logo) {
+      updatedDoc.logo = toWebUploadPath(updatedDoc.logo);
+    }
+
+    res.json(updatedDoc);
   } catch (err) {
     console.error("POST /seller-profile error:", err);
     res.status(500).json({ message: "Failed to update seller profile" });
+  }
+});
+
+// POST /api/features/seller-profile/logo  (upload logo)
+router.post("/seller-profile/logo", protectSeller, upload.single("logo"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "Logo file is required" });
+
+    const logoPath = `/uploads/${req.file.filename}`;
+    const updated = await SellerProfile.findOneAndUpdate(
+      { seller: req.seller._id },
+      { $set: { logo: logoPath } },
+      { new: true, upsert: true }
+    ).lean();
+
+    updated.logo = toWebUploadPath(updated.logo);
+    res.json(updated);
+  } catch (err) {
+    console.error("POST /seller-profile/logo error:", err);
+    res.status(500).json({ message: "Failed to upload logo" });
   }
 });
 

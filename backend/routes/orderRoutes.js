@@ -84,19 +84,27 @@ router.get("/my", protectCustomer, async (req, res) => {
 
 // Seller view: orders that include this seller's items
 router.get("/seller", protectSeller, async (req, res) => {
-  const orders = await Order.find({ "items.seller": req.seller._id }).sort({ createdAt: -1 }).lean();
+  const orders = await Order.find({ "items.seller": req.seller._id })
+    .populate("customer", "name email phone")
+    .sort({ createdAt: -1 })
+    .lean();
+
   const shaped = orders.map((o) => ({
     _id: o._id,
-    customer: o.customer,
+    customer: o.customer, // { _id, name, email, phone }
     status: o.status,
     placedAt: o.placedAt,
+    payment: o.payment,
     totals: { subtotal: o.subtotal, tax: o.tax, shipping: o.shipping, total: o.total },
     items: o.items.filter((i) => i.seller?.toString() === req.seller._id.toString()),
+    // add timestamps so frontend can compute "today" and "this month"
+    createdAt: o.createdAt,
+    updatedAt: o.updatedAt,
   }));
   res.json(shaped);
 });
 
-// Seller can update overall order status (simple policy)
+// Seller can update overall order status
 router.put("/:id/status", protectSeller, async (req, res) => {
   const { status } = req.body;
   const allowed = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
@@ -112,20 +120,19 @@ router.put("/:id/status", protectSeller, async (req, res) => {
   await order.save();
   res.json(order);
 });
-// CANCEL (customer) -> PUT /api/orders/:id/cancel
+
+// Customer cancel
 router.put("/:id/cancel", protectCustomer, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // Must belong to current customer
     if (order.customer.toString() !== req.customer._id.toString()) {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    // Cancel only if not shipped/delivered/cancelled
     const st = (order.status || "").toLowerCase();
-    const cancellable = ["pending", "confirmed", "processing"];
+    const cancellable = ["pending", "confirmed"];
     if (!cancellable.includes(st)) {
       return res.status(400).json({ message: `Cannot cancel order at status '${order.status}'` });
     }
