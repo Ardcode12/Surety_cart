@@ -2742,3 +2742,12 @@ justify-content: flex-end !important;
 gap: 16px !important;
 margin-top: 24px !important;
 }
+/* Profile actions: span both columns and center */
+.profile-view .form-actions {
+  grid-column: 1 / -1 !important; /* span both grid columns */
+  display: flex !important;
+  width: 100%;
+  gap: 16px;
+  margin-top: 24px;
+  justify-content: center !important; /* use flex-end for right align */
+}

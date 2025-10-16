@@ -121,9 +121,9 @@ const HomePage = ({ isAuthenticated, userType, setIsAuthenticated, setUserType }
             <span>Products</span>
           </Link>
           
-          <Link to="/community-cart" className="nav-item" onClick={toggleMenu}>
+          <Link to="/orders" className="nav-item" onClick={toggleMenu}>
             <span className="nav-icon">👥</span>
-            <span>Community Cart</span>
+            <span>My Orders</span>
           </Link>
           
           <Link to="/seller-dashboard" className="nav-item" onClick={toggleMenu}>

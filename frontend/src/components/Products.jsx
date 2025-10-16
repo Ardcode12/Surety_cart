@@ -259,6 +259,10 @@ const handleWishlist = async (product) => {
             <span>Seller Hub</span>
           </Link> */}
           
+          <Link to="/orders" className="nav-item" onClick={() => setShowSidebar(false)}>
+            <Info size={20} />
+            <span>My orders</span>
+          </Link>
           <Link to="/about" className="nav-item" onClick={() => setShowSidebar(false)}>
             <Info size={20} />
             <span>About Us</span>
