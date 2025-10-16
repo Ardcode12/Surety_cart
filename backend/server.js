@@ -1,43 +1,57 @@
 // backend/server.js
-const dotenv = require("dotenv");
 const express = require("express");
+const dotenv = require("dotenv");
 const cors = require("cors");
+const path = require("path");
 const connectDB = require("./config/db");
+
+// Routes
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
-const path = require("path");
-
-// NEW: extra routes
 const featuresRoutes = require("./routes/featuresRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 
 // Load environment variables
 dotenv.config();
 
-// Connect Database
+// Connect to Database
 connectDB();
 
 // Initialize app
 const app = express();
 
-// Middlewares
-app.use(cors());
+// ✅ Configure CORS for Vercel frontend + local dev
+const allowedOrigins = [
+  "https://surety-cart.vercel.app", // 👈 your live Vercel frontend
+  "http://localhost:3000", // for local testing
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true,
+  })
+);
+
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded images
+// Serve static uploads (if any)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Routes
+// API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
-
-// NEW: mount features and orders
 app.use("/api/features", featuresRoutes);
 app.use("/api/orders", orderRoutes);
 
-// Server Listen
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+// ✅ Test route
+app.get("/", (req, res) => {
+  res.send("Backend is running successfully 🚀");
 });
+
+// ✅ Listen on Render’s assigned port
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
