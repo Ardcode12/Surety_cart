@@ -1,7 +1,7 @@
-// frontend/src/services/api.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000';
+// Use environment variable if available, fallback to localhost for dev
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // --- Axios Instances ---
 const authAPI = axios.create({ baseURL: `${API_URL}/api/auth` });
@@ -9,26 +9,17 @@ const productAPI = axios.create({ baseURL: `${API_URL}/api/products` });
 const featuresAPI = axios.create({ baseURL: `${API_URL}/api/features` });
 const ordersAPI = axios.create({ baseURL: `${API_URL}/api/orders` });
 
-// Normalize and build full image URL
+// Normalize image URLs
 const getFullImageUrl = (imagePath) => {
   if (!imagePath) return '/placeholder-image.jpg';
-  let p = String(imagePath).trim();
-
-  // Fix Windows backslashes
-  p = p.replace(/\\/g, '/');
-
-  // If full URL, return as is
+  let p = String(imagePath).replace(/\\/g, '/');
   if (/^https?:\/\//i.test(p)) return p;
-
-  // Ensure it starts with /uploads
   if (!p.startsWith('/')) p = `/${p}`;
-  // In case someone stored '/backend/uploads/...'
   p = p.replace(/^\/backend/, '');
-
   return `${API_URL}${p}`;
 };
 
-// --- Interceptor to add JWT token ---
+// Add JWT header
 const addAuthToken = (req) => {
   const token = localStorage.getItem('token');
   if (token) req.headers.Authorization = `Bearer ${token}`;
@@ -39,21 +30,18 @@ productAPI.interceptors.request.use(addAuthToken);
 featuresAPI.interceptors.request.use(addAuthToken);
 ordersAPI.interceptors.request.use(addAuthToken);
 
-// =================================================================
-// AUTH
-// =================================================================
+// === Auth APIs ===
 export const signupCustomer = (data) => authAPI.post('/customer/signup', data);
 export const loginCustomer = (data) => authAPI.post('/customer/login', data);
 export const signupSeller = (data) => authAPI.post('/seller/signup', data);
 export const loginSeller = (data) => authAPI.post('/seller/login', data);
 
-// =================================================================
-// PRODUCTS
-// =================================================================
+// === Products ===
 export const fetchAllProducts = async () => {
-  const response = await productAPI.get('/');
-  return { data: response.data };
+  const res = await productAPI.get('/');
+  return { data: res.data };
 };
+
 
 export const fetchMyProducts = () => productAPI.get('/my-products');
 
