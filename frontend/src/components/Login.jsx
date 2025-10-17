@@ -16,7 +16,13 @@ import {
   FaFacebook,
   FaTwitter,
   FaUserPlus,
-  FaHome
+  FaHome,
+  FaArrowRight,
+  FaCheckCircle,
+  FaShoppingBag,
+  FaChartLine,
+  FaTruck,
+  FaHeadset
 } from 'react-icons/fa';
 import { signupCustomer, signupSeller, loginCustomer, loginSeller } from '../services/api';
 import './Login.css';
@@ -25,38 +31,27 @@ const Login = ({ setIsAuthenticated, setUserType }) => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const [isLogin, setIsLogin] = useState(
-    location.state?.defaultTab === 'signup' ? false : true
-  );
-  
+  const [activeForm, setActiveForm] = useState('customer-login');
   const [showPassword, setShowPassword] = useState({});
   const [loading, setLoading] = useState({});
   const [error, setError] = useState({});
 
   useEffect(() => {
     AOS.init({
-      duration: 1000,
+      duration: 800,
       once: true,
       easing: 'ease-out-cubic'
     });
   }, []);
 
   useEffect(() => {
-    AOS.refresh();
-  }, [isLogin]);
-
-  useEffect(() => {
-    if (location.state?.userType === 'seller' && !isLogin) {
-      setTimeout(() => {
-        const sellerSection = document.querySelector('.seller-section');
-        if (sellerSection) {
-          sellerSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 500);
+    if (location.state?.defaultTab === 'signup') {
+      setActiveForm('customer-signup');
     }
-  }, [location.state, isLogin]);
-
-  // In frontend/src/components/Login.jsx
+    if (location.state?.userType === 'seller') {
+      setActiveForm(location.state?.defaultTab === 'signup' ? 'seller-signup' : 'seller-login');
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e, type, action) => {
     e.preventDefault();
@@ -68,411 +63,370 @@ const Login = ({ setIsAuthenticated, setUserType }) => {
     const data = Object.fromEntries(formData);
 
     try {
-        let response;
+      let response;
 
-        // Call the correct API function based on the action
-        if (action === 'Login') {
-            response = type === 'Customer'
-                ? await loginCustomer({ email: data.email, password: data.password })
-                : await loginSeller({ email: data.email, password: data.password });
-        } else { // action === 'Signup'
-            if (data.password !== data.confirmPassword) {
-                throw new Error('Passwords do not match');
-            }
-            response = type === 'Customer'
-                ? await signupCustomer({ name: data.name, email: data.email, phone: data.phone, password: data.password })
-                : await signupSeller({ businessName: data.businessName, contactPerson: data.contactPerson, email: data.email, phone: data.phone, password: data.password });
+      if (action === 'Login') {
+        response = type === 'Customer'
+          ? await loginCustomer({ email: data.email, password: data.password })
+          : await loginSeller({ email: data.email, password: data.password });
+      } else {
+        if (data.password !== data.confirmPassword) {
+          throw new Error('Passwords do not match');
+        }
+        response = type === 'Customer'
+          ? await signupCustomer({ name: data.name, email: data.email, phone: data.phone, password: data.password })
+          : await signupSeller({ businessName: data.businessName, contactPerson: data.contactPerson, email: data.email, phone: data.phone, password: data.password });
+      }
+
+      if (response.data.token && response.data.user) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('userInfo', JSON.stringify(response.data.user));
+        localStorage.setItem('userType', type.toLowerCase());
+
+        if (type === 'Seller') {
+          localStorage.setItem('sellerId', response.data.user._id);
         }
 
-        // --- SUCCESS HANDLER ---
-        if (response.data.token && response.data.user) {
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('userInfo', JSON.stringify(response.data.user));
-            localStorage.setItem('userType', type.toLowerCase());
+        setIsAuthenticated(true);
+        setUserType(type.toLowerCase());
 
-            // --- NEW: Store sellerId for seller users ---
-           if (type === 'Seller') {
-    localStorage.setItem('sellerId', response.data.user._id);
-    console.log("Stored sellerId:", response.data.user._id);
-}
-
-
-            setIsAuthenticated(true);
-            setUserType(type.toLowerCase());
-
-            // Navigate based on user type
-            if (type === 'Seller') {
-                navigate('/seller-dashboard');
-            } else {
-                navigate('/');
-            }
+        if (type === 'Seller') {
+          navigate('/seller-dashboard');
         } else {
-            throw new Error('An unexpected error occurred. Please try again.');
+          navigate('/');
         }
+      } else {
+        throw new Error('An unexpected error occurred. Please try again.');
+      }
 
     } catch (err) {
-        console.error(`${type} ${action} Error:`, err);
-        setError({
-            [key]: err.response?.data?.error || err.message || 'An error occurred'
-        });
+      console.error(`${type} ${action} Error:`, err);
+      setError({
+        [key]: err.response?.data?.error || err.message || 'An error occurred'
+      });
     } finally {
-        setLoading({ [key]: false });
+      setLoading({ [key]: false });
     }
-};
+  };
 
   const togglePasswordVisibility = (field) => {
     setShowPassword({ ...showPassword, [field]: !showPassword[field] });
   };
 
-  const LoginForm = () => (
-    <div className="form-container active">
-      <div className="form-wrapper">
-        {/* Customer Login */}
-        <div className="form-section customer-section" data-aos="fade-right" data-aos-delay="200">
-          <div className="section-header">
-            <FaUserCircle className="section-icon" />
-            <h2>Customer Login</h2>
+  const features = [
+    { icon: FaShoppingBag, title: "Wide Selection", desc: "Browse thousands of products" },
+    { icon: FaTruck, title: "Fast Delivery", desc: "Get your orders quickly" },
+    { icon: FaChartLine, title: "Grow Business", desc: "Reach more customers" },
+    { icon: FaHeadset, title: "24/7 Support", desc: "We're always here to help" }
+  ];
+
+  const renderForm = () => {
+    switch(activeForm) {
+      case 'customer-login':
+        return (
+          <div className="form-content" data-aos="fade-in">
+            <div className="form-header">
+              <FaUserCircle className="form-icon" />
+              <h2>Welcome Back!</h2>
+              <p>Login to your customer account</p>
+            </div>
+            <form onSubmit={(e) => handleSubmit(e, 'Customer', 'Login')}>
+              <div className="input-group">
+                <FaEnvelope className="input-icon" />
+                <input type="email" name="email" placeholder="Email Address" required />
+              </div>
+              <div className="input-group">
+                <FaLock className="input-icon" />
+                <input 
+                  type={showPassword['customer-login'] ? 'text' : 'password'} 
+                  name="password"
+                  placeholder="Password" 
+                  required 
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => togglePasswordVisibility('customer-login')}
+                >
+                  {showPassword['customer-login'] ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+              <div className="form-options">
+                <label>
+                  <input type="checkbox" /> Remember me
+                </label>
+                <a href="#">Forgot Password?</a>
+              </div>
+              {error['Customer-Login'] && (
+                <div className="error-message">{error['Customer-Login']}</div>
+              )}
+              <button 
+                type="submit" 
+                className={`submit-btn ${loading['Customer-Login'] ? 'loading' : ''}`}
+                disabled={loading['Customer-Login']}
+              >
+                {loading['Customer-Login'] ? 'Logging in...' : 'Login'}
+              </button>
+              <div className="form-footer">
+                <p>Don't have an account? <button type="button" onClick={() => setActiveForm('customer-signup')} className="link-btn">Sign up</button></p>
+                <div className="divider">or</div>
+                <button type="button" onClick={() => setActiveForm('seller-login')} className="switch-btn">
+                  <FaStore /> Login as Seller
+                </button>
+              </div>
+            </form>
           </div>
-          <form className="auth-form" onSubmit={(e) => handleSubmit(e, 'Customer', 'Login')}>
-            <div className="input-group">
-              <FaEnvelope className="input-icon" />
-              <input 
-                type="email" 
-                name="email"
-                placeholder="Email Address" 
-                required 
-              />
+        );
+
+      case 'customer-signup':
+        return (
+          <div className="form-content" data-aos="fade-in">
+            <div className="form-header">
+              <FaUserPlus className="form-icon" />
+              <h2>Create Account</h2>
+              <p>Join our shopping community</p>
             </div>
-            <div className="input-group">
-              <FaLock className="input-icon" />
-              <input 
-                type={showPassword['customer-login'] ? 'text' : 'password'} 
-                name="password"
-                placeholder="Password" 
-                required 
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => togglePasswordVisibility('customer-login')}
+            <form onSubmit={(e) => handleSubmit(e, 'Customer', 'Signup')}>
+              <div className="input-group">
+                <FaUser className="input-icon" />
+                <input type="text" name="name" placeholder="Full Name" required />
+              </div>
+              <div className="input-group">
+                <FaEnvelope className="input-icon" />
+                <input type="email" name="email" placeholder="Email Address" required />
+              </div>
+              <div className="input-group">
+                <FaPhone className="input-icon" />
+                <input type="tel" name="phone" placeholder="Phone Number" required />
+              </div>
+              <div className="input-group">
+                <FaLock className="input-icon" />
+                <input 
+                  type={showPassword['customer-signup'] ? 'text' : 'password'} 
+                  name="password"
+                  placeholder="Password" 
+                  required 
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => togglePasswordVisibility('customer-signup')}
+                >
+                  {showPassword['customer-signup'] ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+              <div className="input-group">
+                <FaLock className="input-icon" />
+                <input 
+                  type={showPassword['customer-confirm'] ? 'text' : 'password'} 
+                  name="confirmPassword"
+                  placeholder="Confirm Password" 
+                  required 
+                />
+              </div>
+              <div className="form-options">
+                <label>
+                  <input type="checkbox" required /> I agree to the <a href="#">Terms & Conditions</a>
+                </label>
+              </div>
+              {error['Customer-Signup'] && (
+                <div className="error-message">{error['Customer-Signup']}</div>
+              )}
+              <button 
+                type="submit" 
+                className={`submit-btn ${loading['Customer-Signup'] ? 'loading' : ''}`}
+                disabled={loading['Customer-Signup']}
               >
-                {showPassword['customer-login'] ? <FaEyeSlash /> : <FaEye />}
+                {loading['Customer-Signup'] ? 'Creating Account...' : 'Sign Up'}
               </button>
-            </div>
-            <div className="remember-forgot">
-              <label>
-                <input type="checkbox" /> Remember me
-              </label>
-              <a href="#">Forgot Password?</a>
-            </div>
-            {error['Customer-Login'] && (
-              <div className="error-message" style={{ color: '#ff4444', marginBottom: '15px', textAlign: 'center', fontSize: '14px' }}>
-                {error['Customer-Login']}
+              <div className="form-footer">
+                <p>Already have an account? <button type="button" onClick={() => setActiveForm('customer-login')} className="link-btn">Login</button></p>
+                <div className="divider">or</div>
+                <button type="button" onClick={() => setActiveForm('seller-signup')} className="switch-btn">
+                  <FaStore /> Register as Seller
+                </button>
               </div>
-            )}
-            <button 
-              type="submit" 
-              className={`submit-btn customer-btn ${loading['Customer-Login'] ? 'loading' : ''}`}
-              disabled={loading['Customer-Login']}
-            >
-              {loading['Customer-Login'] ? '' : 'Login as Customer'}
-            </button>
-            <div className="social-login">
-              <p>Or login with</p>
-              <div className="social-icons">
-                <a href="#"><FaGoogle /></a>
-                <a href="#"><FaFacebook /></a>
-                <a href="#"><FaTwitter /></a>
-              </div>
-            </div>
-          </form>
-        </div>
-
-        {/* Divider */}
-        <div className="divider" data-aos="zoom-in" data-aos-delay="400">
-          <div className="divider-line"></div>
-          <span>OR</span>
-          <div className="divider-line"></div>
-        </div>
-
-        {/* Seller Login */}
-        <div className="form-section seller-section" data-aos="fade-left" data-aos-delay="200">
-          <div className="section-header">
-            <FaStore className="section-icon" />
-            <h2>Seller Login</h2>
+            </form>
           </div>
-          <form className="auth-form" onSubmit={(e) => handleSubmit(e, 'Seller', 'Login')}>
-            <div className="input-group">
-              <FaEnvelope className="input-icon" />
-              <input 
-                type="email" 
-                name="email"
-                placeholder="Business Email" 
-                required 
-              />
-            </div>
-            <div className="input-group">
-              <FaLock className="input-icon" />
-              <input 
-                type={showPassword['seller-login'] ? 'text' : 'password'} 
-                name="password"
-                placeholder="Password" 
-                required 
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => togglePasswordVisibility('seller-login')}
-              >
-                {showPassword['seller-login'] ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-            <div className="remember-forgot">
-              <label>
-                <input type="checkbox" /> Remember me
-              </label>
-              <a href="#">Forgot Password?</a>
-            </div>
-            {error['Seller-Login'] && (
-              <div className="error-message" style={{ color: '#ff4444', marginBottom: '15px', textAlign: 'center', fontSize: '14px' }}>
-                {error['Seller-Login']}
-              </div>
-            )}
-            <button 
-              type="submit" 
-              className={`submit-btn seller-btn ${loading['Seller-Login'] ? 'loading' : ''}`}
-              disabled={loading['Seller-Login']}
-            >
-              {loading['Seller-Login'] ? '' : 'Login as Seller'}
-            </button>
-            <div className="seller-extra">
-              <p>New seller? <a href="#">Apply here</a></p>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
+        );
 
-  const SignupForm = () => (
-    <div className="form-container active">
-      <div className="form-wrapper">
-        {/* Customer Signup */}
-        <div className="form-section customer-section" data-aos="fade-right" data-aos-delay="200">
-          <div className="section-header">
-            <FaUserPlus className="section-icon" />
-            <h2>Customer Sign Up</h2>
+      case 'seller-login':
+        return (
+          <div className="form-content seller-form" data-aos="fade-in">
+            <div className="form-header">
+              <FaStore className="form-icon" />
+              <h2>Seller Portal</h2>
+              <p>Access your business dashboard</p>
+            </div>
+            <form onSubmit={(e) => handleSubmit(e, 'Seller', 'Login')}>
+              <div className="input-group">
+                <FaEnvelope className="input-icon" />
+                <input type="email" name="email" placeholder="Business Email" required />
+              </div>
+              <div className="input-group">
+                <FaLock className="input-icon" />
+                <input 
+                  type={showPassword['seller-login'] ? 'text' : 'password'} 
+                  name="password"
+                  placeholder="Password" 
+                  required 
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => togglePasswordVisibility('seller-login')}
+                >
+                  {showPassword['seller-login'] ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+              <div className="form-options">
+                <label>
+                  <input type="checkbox" /> Remember me
+                </label>
+                <a href="#">Forgot Password?</a>
+              </div>
+              {error['Seller-Login'] && (
+                <div className="error-message">{error['Seller-Login']}</div>
+              )}
+              <button 
+                type="submit" 
+                className={`submit-btn seller-btn ${loading['Seller-Login'] ? 'loading' : ''}`}
+                disabled={loading['Seller-Login']}
+              >
+                {loading['Seller-Login'] ? 'Logging in...' : 'Login as Seller'}
+              </button>
+              <div className="form-footer">
+                <p>New seller? <button type="button" onClick={() => setActiveForm('seller-signup')} className="link-btn">Register here</button></p>
+                <div className="divider">or</div>
+                <button type="button" onClick={() => setActiveForm('customer-login')} className="switch-btn">
+                  <FaUserCircle /> Login as Customer
+                </button>
+              </div>
+            </form>
           </div>
-          <form className="auth-form" onSubmit={(e) => handleSubmit(e, 'Customer', 'Signup')}>
-            <div className="input-group">
-              <FaUser className="input-icon" />
-              <input 
-                type="text" 
-                name="name"
-                placeholder="Full Name" 
-                required 
-              />
+        );
+
+      case 'seller-signup':
+        return (
+          <div className="form-content seller-form" data-aos="fade-in">
+            <div className="form-header">
+              <FaStore className="form-icon" />
+              <h2>Become a Seller</h2>
+              <p>Start your business journey with us</p>
             </div>
-            <div className="input-group">
-              <FaEnvelope className="input-icon" />
-              <input 
-                type="email" 
-                name="email"
-                placeholder="Email Address" 
-                required 
-              />
-            </div>
-            <div className="input-group">
-              <FaPhone className="input-icon" />
-              <input 
-                type="tel" 
-                name="phone"
-                placeholder="Phone Number" 
-                required 
-              />
-            </div>
-            <div className="input-group">
-              <FaLock className="input-icon" />
-              <input 
-                type={showPassword['customer-signup'] ? 'text' : 'password'} 
-                name="password"
-                placeholder="Password" 
-                required 
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => togglePasswordVisibility('customer-signup')}
-              >
-                {showPassword['customer-signup'] ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-            <div className="input-group">
-              <FaLock className="input-icon" />
-              <input 
-                type={showPassword['customer-confirm'] ? 'text' : 'password'} 
-                name="confirmPassword"
-                placeholder="Confirm Password" 
-                required 
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => togglePasswordVisibility('customer-confirm')}
-              >
-                {showPassword['customer-confirm'] ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-            <div className="terms">
-              <label>
-                <input type="checkbox" required /> I agree to the <a href="#">Terms & Conditions</a>
-              </label>
-            </div>
-            {error['Customer-Signup'] && (
-              <div className="error-message" style={{ color: '#ff4444', marginBottom: '15px', textAlign: 'center', fontSize: '14px' }}>
-                {error['Customer-Signup']}
+            <form onSubmit={(e) => handleSubmit(e, 'Seller', 'Signup')}>
+              <div className="input-group">
+                <FaBuilding className="input-icon" />
+                <input type="text" name="businessName" placeholder="Business Name" required />
               </div>
-            )}
-            <button 
-              type="submit" 
-              className={`submit-btn customer-btn ${loading['Customer-Signup'] ? 'loading' : ''}`}
-              disabled={loading['Customer-Signup']}
-            >
-              {loading['Customer-Signup'] ? '' : 'Sign Up as Customer'}
-            </button>
-          </form>
-        </div>
-
-        {/* Divider */}
-        <div className="divider" data-aos="zoom-in" data-aos-delay="400">
-          <div className="divider-line"></div>
-          <span>OR</span>
-          <div className="divider-line"></div>
-        </div>
-
-        {/* Seller Signup */}
-        <div className="form-section seller-section" data-aos="fade-left" data-aos-delay="200">
-          <div className="section-header">
-            <FaStore className="section-icon" />
-            <h2>Seller Sign Up</h2>
+              <div className="input-group">
+                <FaUser className="input-icon" />
+                <input type="text" name="contactPerson" placeholder="Contact Person" required />
+              </div>
+              <div className="input-group">
+                <FaEnvelope className="input-icon" />
+                <input type="email" name="email" placeholder="Business Email" required />
+              </div>
+              <div className="input-group">
+                <FaPhone className="input-icon" />
+                <input type="tel" name="phone" placeholder="Business Phone" required />
+              </div>
+              <div className="input-group">
+                <FaLock className="input-icon" />
+                <input 
+                  type={showPassword['seller-signup'] ? 'text' : 'password'} 
+                  name="password"
+                  placeholder="Password" 
+                  required 
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => togglePasswordVisibility('seller-signup')}
+                >
+                  {showPassword['seller-signup'] ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+              <div className="input-group">
+                <FaLock className="input-icon" />
+                <input 
+                  type={showPassword['seller-confirm'] ? 'text' : 'password'} 
+                  name="confirmPassword"
+                  placeholder="Confirm Password" 
+                  required 
+                />
+              </div>
+              <div className="form-options">
+                <label>
+                  <input type="checkbox" required /> I agree to the <a href="#">Seller Agreement</a>
+                </label>
+              </div>
+              {error['Seller-Signup'] && (
+                <div className="error-message">{error['Seller-Signup']}</div>
+              )}
+              <button 
+                type="submit" 
+                className={`submit-btn seller-btn ${loading['Seller-Signup'] ? 'loading' : ''}`}
+                disabled={loading['Seller-Signup']}
+              >
+                {loading['Seller-Signup'] ? 'Creating Account...' : 'Register as Seller'}
+              </button>
+              <div className="form-footer">
+                <p>Already a seller? <button type="button" onClick={() => setActiveForm('seller-login')} className="link-btn">Login</button></p>
+                <div className="divider">or</div>
+                <button type="button" onClick={() => setActiveForm('customer-signup')} className="switch-btn">
+                  <FaUserCircle /> Register as Customer
+                </button>
+              </div>
+            </form>
           </div>
-          <form className="auth-form" onSubmit={(e) => handleSubmit(e, 'Seller', 'Signup')}>
-            <div className="input-group">
-              <FaBuilding className="input-icon" />
-              <input 
-                type="text" 
-                name="businessName"
-                placeholder="Business Name" 
-                required 
-              />
-            </div>
-            <div className="input-group">
-              <FaUser className="input-icon" />
-              <input 
-                type="text" 
-                name="contactPerson"
-                placeholder="Contact Person" 
-                required 
-              />
-            </div>
-            <div className="input-group">
-              <FaEnvelope className="input-icon" />
-              <input 
-                type="email" 
-                name="email"
-                placeholder="Business Email" 
-                required 
-              />
-            </div>
-            <div className="input-group">
-              <FaPhone className="input-icon" />
-              <input 
-                type="tel" 
-                name="phone"
-                placeholder="Business Phone" 
-                required 
-              />
-            </div>
-            <div className="input-group">
-              <FaLock className="input-icon" />
-              <input 
-                type={showPassword['seller-signup'] ? 'text' : 'password'} 
-                name="password"
-                placeholder="Password" 
-                required 
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => togglePasswordVisibility('seller-signup')}
-              >
-                {showPassword['seller-signup'] ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-            <div className="input-group">
-              <FaLock className="input-icon" />
-              <input 
-                type={showPassword['seller-confirm'] ? 'text' : 'password'} 
-                name="confirmPassword"
-                placeholder="Confirm Password" 
-                required 
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => togglePasswordVisibility('seller-confirm')}
-              >
-                {showPassword['seller-confirm'] ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-            <div className="terms">
-              <label>
-                <input type="checkbox" required /> I agree to the <a href="#">Seller Agreement</a>
-              </label>
-            </div>
-            {error['Seller-Signup'] && (
-              <div className="error-message" style={{ color: '#ff4444', marginBottom: '15px', textAlign: 'center', fontSize: '14px' }}>
-                {error['Seller-Signup']}
-              </div>
-            )}
-            <button 
-              type="submit" 
-              className={`submit-btn seller-btn ${loading['Seller-Signup'] ? 'loading' : ''}`}
-              disabled={loading['Seller-Signup']}
-            >
-              {loading['Seller-Signup'] ? '' : 'Sign Up as Seller'}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="login-page">
-      {/* Back to Home Button */}
       <Link to="/" className="back-to-home" data-aos="fade-down">
         <FaHome /> Back to Home
       </Link>
       
-      <div className="container">
-        {/* Toggle Button */}
-        <div className="form-toggle" data-aos="fade-down">
-          <button 
-            className={`toggle-btn ${isLogin ? 'active' : ''}`} 
-            onClick={() => setIsLogin(true)}
-          >
-            Login
-          </button>
-          <button 
-            className={`toggle-btn ${!isLogin ? 'active' : ''}`} 
-            onClick={() => setIsLogin(false)}
-          >
-            Sign Up
-          </button>
+      <div className="login-container">
+        <div className="login-wrapper">
+          {/* Left Side - Form */}
+          <div className="form-side">
+            {renderForm()}
+          </div>
+          
+          {/* Right Side - Info */}
+          <div className="info-side" data-aos="fade-left">
+            <div className="info-content">
+              <h1>Welcome to Our Platform</h1>
+              <p className="tagline">Your one-stop solution for all shopping needs</p>
+              
+              <div className="features-grid">
+                {features.map((feature, index) => (
+                  <div key={index} className="feature-item" data-aos="fade-up" data-aos-delay={index * 100}>
+                    <feature.icon className="feature-icon" />
+                    <h3>{feature.title}</h3>
+                    <p>{feature.desc}</p>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="social-section">
+                <p>Connect with us</p>
+                <div className="social-icons">
+                  <a href="#"><FaFacebook /></a>
+                  <a href="#"><FaTwitter /></a>
+                  <a href="#"><FaGoogle /></a>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-
-        {isLogin ? <LoginForm /> : <SignupForm />}
       </div>
     </div>
   );

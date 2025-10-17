@@ -64,33 +64,30 @@ const handleLogout = () => {
 
   
   const loadProducts = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetchAllProducts();
-      if (response && response.data && response.data.length > 0) {
-        const formattedProducts = response.data.map(p => ({
-  ...p,
-  
-  name: p.name || 'Unnamed Product',
-  id: p._id || p.id,
-  image: p.image, // backend returns '/uploads/...'
-  description: p.description || 'No description available',
-  discount: p.discount || 0,
-  isProtected: p.isProtected !== undefined ? p.isProtected : true,
-  seller: p.seller || { name: "Unknown Seller", socialId: "@unknown", verified: false, rating: 0 }
-}));
+  setIsLoading(true);
+  try {
+    const response = await fetchAllProducts();
+    if (response && response.data && response.data.length > 0) {
+      const formattedProducts = response.data.map(p => ({
+        ...p,
+        name: p.name || 'Unnamed Product',
+        id: p._id || p.id,
+        image: p.image, // Keep the original image path from backend
+        description: p.description || 'No description available',
+        discount: p.discount || 0,
+        isProtected: p.isProtected !== undefined ? p.isProtected : true,
+        seller: p.seller || { name: "Unknown Seller", socialId: "@unknown", verified: false, rating: 0 }
+      }));
 
-        setProducts(formattedProducts);
-        setFilteredProducts(formattedProducts);
-      } 
-    } catch (error) {
-      console.error("Failed to fetch products:", error);
-      // Fallback to sample products
-      
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      setProducts(formattedProducts);
+      setFilteredProducts(formattedProducts);
+    } 
+  } catch (error) {
+    console.error("Failed to fetch products:", error);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Filter and Sort functions
   useEffect(() => {
@@ -249,10 +246,7 @@ const handleWishlist = async (product) => {
             <span>Products</span>
           </Link>
           
-          <Link to="/community-cart" className="nav-item" onClick={() => setShowSidebar(false)}>
-            <Users size={20} />
-            <span>Community Cart</span>
-          </Link>
+          
           
           {/* <Link to="/seller-dashboard" className="nav-item" onClick={() => setShowSidebar(false)}>
             <Store size={20} />

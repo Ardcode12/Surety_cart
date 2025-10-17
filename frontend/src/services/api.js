@@ -10,14 +10,20 @@ const featuresAPI = axios.create({ baseURL: `${API_URL}/api/features` });
 const ordersAPI = axios.create({ baseURL: `${API_URL}/api/orders` });
 
 // Normalize image URLs
-const getFullImageUrl = (imagePath) => {
-  if (!imagePath) return '/placeholder-image.jpg';
-  let p = String(imagePath).replace(/\\/g, '/');
-  if (/^https?:\/\//i.test(p)) return p;
-  if (!p.startsWith('/')) p = `/${p}`;
-  p = p.replace(/^\/backend/, '');
-  return `${API_URL}${p}`;
+// In frontend/src/services/api.js
+export const getFullImageUrl = (imagePath) => {
+  if (!imagePath) return 'https://via.placeholder.com/400';
+  
+  // If it's already a full URL, return as-is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // If it's a relative path, prepend the API URL
+  const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  return `${API_URL}${cleanPath}`;
 };
+
 
 // Add JWT header
 const addAuthToken = (req) => {
@@ -103,4 +109,4 @@ export const getSellerOrders = () => ordersAPI.get('/seller');
 export const updateOrderStatus = (orderId, status) => ordersAPI.put(`/${orderId}/status`, { status });
 
 // Export helper
-export { getFullImageUrl };
+

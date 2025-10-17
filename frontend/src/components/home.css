@@ -1334,3 +1334,445 @@ position: fixed;
     color: black;
   }
 }
+/* Updated responsive styles in home.css */
+
+/* Mobile-First Approach Updates */
+
+/* Hero Section Mobile Fixes */
+@media (max-width: 768px) {
+  .premium-homepage .hero-section {
+    min-height: auto;
+    padding: 1rem;
+    margin-top: 60px; /* Reduced for mobile */
+  }
+
+  .premium-homepage .hero-container {
+    gap: 2rem;
+  }
+
+  .premium-homepage .hero-actions {
+    margin-left: 0; /* Remove left margin on mobile */
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .premium-homepage .hero-stats {
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .premium-homepage .stat-item {
+    margin-left: 0;
+    text-align: center;
+  }
+
+  /* Floating Cards - Hide on mobile */
+  .premium-homepage .floating-cards {
+    display: none;
+  }
+
+  /* Categories Grid Mobile */
+  .premium-homepage .categories-carousel {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .premium-homepage .category-item {
+    flex: 0 0 280px;
+    scroll-snap-align: center;
+  }
+
+  /* Trust Grid Mobile */
+  .premium-homepage .trust-grid {
+    gap: 1rem;
+  }
+
+  .premium-homepage .trust-item {
+    padding: 1.5rem;
+  }
+
+  /* Features Grid Mobile */
+  .premium-homepage .feature-card {
+    padding: 2rem 1.5rem;
+  }
+}
+
+/* Small Mobile Specific (max-width: 480px) */
+@media (max-width: 480px) {
+  /* Header Adjustments */
+  .premium-homepage .homepage-header {
+    height: 60px;
+    padding: 0 1rem;
+  }
+
+  .premium-homepage .header-container {
+    padding: 0;
+    gap: 0.5rem;
+  }
+
+  .premium-homepage .menu-toggle {
+    left: 1rem;
+    width: 40px;
+    height: 40px;
+    top: 10px;
+  }
+
+  .premium-homepage .header-logo {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .premium-homepage .header-logo .logo-text {
+    font-size: 1.25rem;
+  }
+
+  /* Hero Content Mobile */
+  .premium-homepage .hero-content {
+    padding: 0;
+  }
+
+  .premium-homepage .hero-badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .premium-homepage .hero-title {
+    font-size: 2rem;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+  }
+
+  .premium-homepage .hero-description {
+    font-size: 0.975rem;
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+  }
+
+  .premium-homepage .primary-button,
+  .premium-homepage .secondary-button {
+    padding: 0.875rem 1.5rem;
+    font-size: 0.975rem;
+  }
+
+  .premium-homepage .stat-number {
+    font-size: 1.75rem;
+  }
+
+  .premium-homepage .stat-label {
+    font-size: 0.75rem;
+  }
+
+  /* Section Spacing Mobile */
+  .premium-homepage section {
+    padding: 3rem 0;
+  }
+
+  .premium-homepage .section-container {
+    padding: 0 1rem;
+  }
+
+  .premium-homepage .section-header {
+    margin-bottom: 2rem;
+  }
+
+  .premium-homepage .section-title {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .premium-homepage .section-subtitle {
+    font-size: 0.975rem;
+  }
+
+  /* Sidebar Full Screen on Mobile */
+  .premium-homepage .premium-sidebar {
+    width: 85%;
+    max-width: 320px;
+  }
+
+  /* CTA Section Mobile */
+  .premium-homepage .cta-title {
+    font-size: 1.5rem;
+    line-height: 1.3;
+  }
+
+  .premium-homepage .cta-subtitle {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .premium-homepage .cta-button {
+    padding: 1rem 1.5rem;
+    font-size: 0.975rem;
+  }
+
+  /* Touch-Friendly Spacing */
+  .premium-homepage .nav-item {
+    padding: 1.25rem 1.5rem;
+  }
+
+  /* Improve Readability */
+  .premium-homepage .about-content p {
+    font-size: 1rem;
+    text-align: left;
+  }
+
+  /* Fix Gradient Spheres on Mobile */
+  .premium-homepage .gradient-sphere {
+    filter: blur(80px);
+  }
+
+  .premium-homepage .sphere-1 {
+    width: 300px;
+    height: 300px;
+    top: -150px;
+    left: -150px;
+  }
+
+  .premium-homepage .sphere-2 {
+    width: 400px;
+    height: 400px;
+    bottom: -200px;
+    right: -200px;
+  }
+
+  .premium-homepage .sphere-3 {
+    width: 200px;
+    height: 200px;
+  }
+}
+
+/* Very Small Devices (max-width: 375px) */
+@media (max-width: 375px) {
+  .premium-homepage .hero-title {
+    font-size: 1.75rem;
+  }
+
+  .premium-homepage .header-logo .logo-text {
+    font-size: 1.1rem;
+  }
+
+  .premium-homepage .primary-button,
+  .premium-homepage .secondary-button {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch targets */
+  .premium-homepage .menu-toggle {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .premium-homepage .nav-item {
+    min-height: 48px;
+  }
+
+  .premium-homepage .primary-button,
+  .premium-homepage .secondary-button,
+  .premium-homepage .cta-button {
+    min-height: 48px;
+  }
+
+  /* Disable hover effects on touch devices */
+  .premium-homepage .feature-card:hover,
+  .premium-homepage .category-item:hover,
+  .premium-homepage .trust-item:hover {
+    transform: none;
+  }
+
+  /* Improve scrolling */
+  .premium-homepage .categories-carousel {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .premium-homepage .categories-carousel::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Landscape Mobile Fixes */
+@media (max-width: 812px) and (orientation: landscape) {
+  .premium-homepage .hero-section {
+    min-height: auto;
+    padding: 1rem;
+  }
+
+  .premium-homepage .hero-title {
+    font-size: 1.75rem;
+  }
+
+  .premium-homepage section {
+    padding: 2rem 0;
+  }
+}
+
+/* Fix for iOS Safari */
+@supports (-webkit-touch-callout: none) {
+  /* iOS specific fixes */
+  .premium-homepage {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .premium-homepage .homepage-header {
+    position: -webkit-sticky;
+  }
+
+  .premium-homepage .premium-sidebar {
+    -webkit-transform: translateX(-100%);
+    transform: translateX(-100%);
+  }
+
+  .premium-homepage .premium-sidebar.show {
+    -webkit-transform: translateX(0);
+    transform: translateX(0);
+  }
+}
+
+/* Safe Area Insets for Notched Devices */
+@supports (padding: max(0px)) {
+  .premium-homepage .homepage-header {
+    padding-left: max(2rem, env(safe-area-inset-left));
+    padding-right: max(2rem, env(safe-area-inset-right));
+  }
+
+  .premium-homepage .premium-sidebar {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  @media (max-width: 768px) {
+    .premium-homepage .homepage-header {
+      padding-left: max(1rem, env(safe-area-inset-left));
+      padding-right: max(1rem, env(safe-area-inset-right));
+    }
+  }
+}
+
+/* Performance Optimizations for Mobile */
+@media (max-width: 768px) {
+  /* Reduce animations on mobile for better performance */
+  .premium-homepage .gradient-sphere {
+    animation: none;
+    opacity: 0.1;
+  }
+
+  .premium-homepage .floating-card {
+    animation: none;
+  }
+
+  /* Optimize images */
+  .premium-homepage .card-placeholder img {
+    max-width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+}
+
+/* Fix z-index stacking on mobile */
+@media (max-width: 768px) {
+  .premium-homepage .homepage-header {
+    z-index: 999;
+  }
+
+  .premium-homepage .sidebar-overlay {
+    z-index: 998;
+  }
+
+  .premium-homepage .premium-sidebar {
+    z-index: 1000;
+  }
+
+  .premium-homepage .menu-toggle {
+    z-index: 1001;
+  }
+}
+
+/* Additional Mobile-Specific Component Fixes */
+
+/* Mobile Navigation Improvements */
+@media (max-width: 768px) {
+  .premium-homepage .nav-menu {
+    padding: 1rem 0;
+  }
+
+  .premium-homepage .nav-item {
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .premium-homepage .nav-icon {
+    font-size: 1.5rem;
+    width: 2rem;
+  }
+
+  .premium-homepage .nav-actions {
+    padding: 1rem 1.5rem;
+  }
+
+  .premium-homepage .nav-button {
+    padding: 0.875rem 1.25rem;
+  }
+}
+
+/* Categories Section Mobile Scroll Indicator */
+@media (max-width: 768px) {
+  .premium-homepage .categories-showcase::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 50px;
+    background: linear-gradient(to right, transparent, rgba(15, 23, 42, 0.8));
+    pointer-events: none;
+  }
+}
+
+/* Mobile-Optimized Buttons */
+@media (max-width: 480px) {
+  .premium-homepage .button-text {
+    font-size: 0.975rem;
+  }
+
+  .premium-homepage .button-icon {
+    font-size: 1.125rem;
+  }
+
+  .premium-homepage .header-logout-btn,
+  .premium-homepage .header-login-btn {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Fix Image Aspect Ratios on Mobile */
+@media (max-width: 768px) {
+  .premium-homepage .card-placeholder img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 12px;
+  }
+}
+
+/* Ensure Content Doesn't Get Cut Off */
+@media (max-width: 768px) {
+  .premium-homepage {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  .premium-homepage .cta-section {
+    padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
+  }
+}

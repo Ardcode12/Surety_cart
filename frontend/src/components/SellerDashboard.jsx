@@ -488,21 +488,7 @@ const INR = (n) => `₹${Math.round(Number(n || 0)).toLocaleString('en-IN')}`;
             </button>
           </div>
 
-          <div className="nav-section">
-            <h4 className="nav-title">Analytics</h4>
-            <button className={`nav-link ${activeView === 'revenue' ? 'active' : ''}`} onClick={() => setActiveView('revenue')}>
-              <div className="nav-icon"><DollarSign size={20} /></div>
-              <span>Revenue</span>
-            </button>
-            <button className={`nav-link ${activeView === 'customers' ? 'active' : ''}`} onClick={() => setActiveView('customers')}>
-              <div className="nav-icon"><Users size={20} /></div>
-              <span>Customers</span>
-            </button>
-            <button className={`nav-link ${activeView === 'performance' ? 'active' : ''}`} onClick={() => setActiveView('performance')}>
-              <div className="nav-icon"><TrendingUp size={20} /></div>
-              <span>Performance</span>
-            </button>
-          </div>
+          
 
           <div className="nav-section">
             <h4 className="nav-title">Settings</h4>
@@ -518,12 +504,7 @@ const INR = (n) => `₹${Math.round(Number(n || 0)).toLocaleString('en-IN')}`;
         </nav>
 
         <div className="sidebar-footer">
-          <div className="storage-info">
-            <div className="storage-header">
-              <span>Storage Used</span>
-              <span>75%</span>
-            </div>
-          </div>
+          
 
           <button className="logout-button" onClick={handleLogout}>
             <LogOut size={20} />

@@ -28,7 +28,8 @@ const app = express();
 // ✅ Configure CORS for Vercel frontend + local dev
 const allowedOrigins = [
   "https://surety-cart.vercel.app", // 👈 your live Vercel frontend
-  "http://localhost:3000", // for local testing
+  "http://localhost:3000",
+  "http://localhost:3001", // for local testing
 ];
 
 app.use(
