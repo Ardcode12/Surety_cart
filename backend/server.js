@@ -1,18 +1,22 @@
-// backend/server.js
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const path = require("path");
 const mongoose = require("mongoose");
 
-// Routes
+// Load environment variables FIRST
+dotenv.config();
+
+// Verify env vars are loaded
+console.log('=== SERVER STARTUP ===');
+console.log('MongoDB URI:', process.env.MONGO_URI ? 'SET' : 'NOT SET');
+console.log('Cloudinary Config:', process.env.CLOUDINARY_CLOUD_NAME ? 'SET' : 'NOT SET');
+
+// Routes - Import AFTER dotenv
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const featuresRoutes = require("./routes/featuresRoutes");
 const orderRoutes = require("./routes/orderRoutes");
-
-// Load environment variables
-dotenv.config();
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
@@ -25,16 +29,23 @@ mongoose.connect(process.env.MONGO_URI, {
 // Initialize app
 const app = express();
 
-// ✅ Configure CORS for Vercel frontend + local dev
+// Configure CORS
 const allowedOrigins = [
-  "https://surety-cart.vercel.app", // 👈 your live Vercel frontend
+  "https://surety-cart.vercel.app",
   "http://localhost:3000",
-  "http://localhost:3001", // for local testing
+  "http://localhost:3001",
 ];
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
   })
@@ -44,8 +55,8 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static uploads (if any)
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Serve uploads folder (fallback for local images)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 app.use("/api/auth", authRoutes);
@@ -53,11 +64,17 @@ app.use("/api/products", productRoutes);
 app.use("/api/features", featuresRoutes);
 app.use("/api/orders", orderRoutes);
 
-// ✅ Test route
+// Test route
 app.get("/", (req, res) => {
   res.send("Backend is running successfully 🚀");
 });
 
-// ✅ Listen on Render’s assigned port
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
+
+// Listen on port
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

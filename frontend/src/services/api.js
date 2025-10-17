@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Use environment variable if available, fallback to localhost for dev
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // --- Axios Instances ---
@@ -9,22 +8,6 @@ const productAPI = axios.create({ baseURL: `${API_URL}/api/products` });
 const featuresAPI = axios.create({ baseURL: `${API_URL}/api/features` });
 const ordersAPI = axios.create({ baseURL: `${API_URL}/api/orders` });
 
-// Normalize image URLs
-// In frontend/src/services/api.js
-export const getFullImageUrl = (imagePath) => {
-  if (!imagePath) return 'https://via.placeholder.com/400';
-  
-  // If it's already a full URL, return as-is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath;
-  }
-  
-  // If it's a relative path, prepend the API URL
-  const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
-  return `${API_URL}${cleanPath}`;
-};
-
-
 // Add JWT header
 const addAuthToken = (req) => {
   const token = localStorage.getItem('token');
@@ -32,9 +15,27 @@ const addAuthToken = (req) => {
   return req;
 };
 
+// Updated image URL handler for Cloudinary
+export const getFullImageUrl = (imagePath) => {
+  if (!imagePath) return 'https://dummyimage.com/400x400/cccccc/666666.png&text=No+Image';
+  
+  // Cloudinary URLs are already complete
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // Fallback for any legacy local images
+  const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  return `${baseURL}${imagePath}`;
+};
+
+// Apply interceptors
 productAPI.interceptors.request.use(addAuthToken);
 featuresAPI.interceptors.request.use(addAuthToken);
 ordersAPI.interceptors.request.use(addAuthToken);
+
+// ... rest of your API functions remain the same
+
 
 // === Auth APIs ===
 export const signupCustomer = (data) => authAPI.post('/customer/signup', data);
@@ -53,9 +54,10 @@ export const fetchMyProducts = () => productAPI.get('/my-products');
 
 // Force multipart for add/update with files
 export const addProduct = (productFormData) =>
-  productAPI.post('/', productFormData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+    productAPI.post('/', productFormData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
 
 export const deleteProduct = (productId) => productAPI.delete(`/${productId}`);
 

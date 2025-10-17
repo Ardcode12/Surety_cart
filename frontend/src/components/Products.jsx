@@ -63,21 +63,29 @@ const handleLogout = () => {
 
 
   
-  const loadProducts = async () => {
+  // Replace the loadProducts function with this corrected version:
+const loadProducts = async () => {
   setIsLoading(true);
   try {
     const response = await fetchAllProducts();
+    console.log("=== PRODUCTS DEBUG ===");
+    console.log("Raw Response:", response);
+    
     if (response && response.data && response.data.length > 0) {
-      const formattedProducts = response.data.map(p => ({
-        ...p,
-        name: p.name || 'Unnamed Product',
-        id: p._id || p.id,
-        image: p.image, // Keep the original image path from backend
-        description: p.description || 'No description available',
-        discount: p.discount || 0,
-        isProtected: p.isProtected !== undefined ? p.isProtected : true,
-        seller: p.seller || { name: "Unknown Seller", socialId: "@unknown", verified: false, rating: 0 }
-      }));
+      const formattedProducts = response.data.map(p => {
+        const imageUrl = getFullImageUrl(p.image);
+        console.log(`Product: ${p.name}`);
+        console.log(`  - Original image path: ${p.image}`);
+        console.log(`  - Processed URL: ${imageUrl}`);
+        console.log(`  - Is Cloudinary URL: ${p.image?.includes('cloudinary')}`);
+        
+        return {
+          ...p,
+          name: p.name || 'Unnamed Product',
+          id: p._id || p.id,
+          image: p.image,
+        };
+      });
 
       setProducts(formattedProducts);
       setFilteredProducts(formattedProducts);
@@ -88,6 +96,8 @@ const handleLogout = () => {
     setIsLoading(false);
   }
 };
+
+
 
   // Filter and Sort functions
   useEffect(() => {
@@ -516,11 +526,15 @@ const handleWishlist = async (product) => {
                   {/* Product Image */}
                   <div className="product-image-container">
 <img
-src={getFullImageUrl(product.image) || 'https://via.placeholder.com/400'}
-alt={product.name}
-className="product-image"
-onError={(e) => { e.target.src = 'https://via.placeholder.com/400'; }}
+  src={getFullImageUrl(product.image) || 'https://dummyimage.com/400x400/cccccc/666666.png&text=No+Image'}
+  alt={product.name}
+  className="product-image"
+  onError={(e) => { 
+    console.error(`Image failed to load for ${product.name}:`, product.image);
+    e.target.src = 'https://dummyimage.com/400x400/cccccc/666666.png&text=No+Image'; 
+  }}
 />
+
                     
 <button 
   className={`wishlist-btn ${wishlist.includes(product._id || product.id) ? 'active' : ''}`}

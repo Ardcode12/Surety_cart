@@ -298,24 +298,46 @@ const INR = (n) => `₹${Math.round(Number(n || 0)).toLocaleString('en-IN')}`;
 
   // Add product (form submit)
   const handleAddProduct = async (e) => {
-  e.preventDefault();
-  const formData = new FormData(e.target);
-  const imageFile = formData.get('image');
-  if (!imageFile || imageFile.size === 0) {
-    alert("Please select an image for the product.");
-    return;
-  }
-  try {
-    await addProduct(formData); // api.js forces multipart headers
-    e.target.reset();
-    setUploadedImages([]);
-    setShowAddProductModal(false);
-    await loadMyProducts();
-  } catch (error) {
-    console.error('Add Product Error:', error);
-    alert(error?.response?.data?.message || 'Failed to add product');
-  }
+    e.preventDefault();
+    
+    // Validate image is selected
+    if (uploadedImages.length === 0) {
+        alert("Please select an image for the product.");
+        return;
+    }
+    
+    // Build FormData with state values
+    const formData = new FormData();
+    formData.append('name', newProductForm.name);
+    formData.append('description', newProductForm.description);
+    formData.append('price', newProductForm.price);
+    formData.append('originalPrice', newProductForm.originalPrice || '');
+    formData.append('quantity', newProductForm.quantity);
+    formData.append('category', newProductForm.category);
+    formData.append('brand', newProductForm.brand || '');
+    formData.append('image', uploadedImages[0]); // Attach the actual file
+    
+    try {
+        await addProduct(formData);
+        // Reset form
+        setNewProductForm({
+            name: '',
+            description: '',
+            price: '',
+            originalPrice: '',
+            quantity: '',
+            category: '',
+            brand: ''
+        });
+        setUploadedImages([]);
+        setShowAddProductModal(false);
+        await loadMyProducts();
+    } catch (error) {
+        console.error('Add Product Error:', error);
+        alert(error?.response?.data?.message || 'Failed to add product');
+    }
 };
+
 
   // Delete product
   const handleDeleteProduct = async (productId) => {
@@ -660,7 +682,15 @@ const INR = (n) => `₹${Math.round(Number(n || 0)).toLocaleString('en-IN')}`;
                   .map((product, index) => (
                   <div key={product._id} className="product-card" data-aos="fade-up" data-aos-delay={index * 50}>
                     <div className="product-image-container">
-                      <img src={getFullImageUrl(product.image)} alt={product.name} className="product-image" onError={(e) => { e.target.src = 'https://via.placeholder.com/400'; }} />
+<img 
+  src={getFullImageUrl(product.image)} 
+  alt={product.name} 
+  className="product-image" 
+  onError={(e) => { 
+    console.error(`Failed to load image for ${product.name}:`, product.image);
+    e.target.src = 'https://dummyimage.com/400x400/cccccc/666666.png&text=No+Image'; 
+  }} 
+/>
                     </div>
                     <div className="product-content">
                       <div className="product-header">

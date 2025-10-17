@@ -5,6 +5,7 @@ import HomePage from './components/Home';
 import Login from './components/Login';
 import SellerDashboard from './components/SellerDashboard';
 import Products from './components/Products';
+import CloudinaryTest from './components/CloudinaryTest';
 import Cart from './components/Cart';
 import Wishlist from './components/Wishlist';
 import Orders from './components/Orders';
@@ -65,6 +66,7 @@ function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/wishlist" element={<Wishlist />} />
+<Route path="/cloudinary-test" element={<CloudinaryTest />} />
 
           {/* NEW: Orders route (customer protected) */}
           <Route
