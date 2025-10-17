@@ -252,7 +252,7 @@ const Login = ({ setIsAuthenticated, setUserType }) => {
 
       case 'seller-login':
         return (
-          <div className="form-content seller-form" data-aos="fade-in">
+          <div className="form-content seller-form" >
             <div className="form-header">
               <FaStore className="form-icon" />
               <h2>Seller Portal</h2>

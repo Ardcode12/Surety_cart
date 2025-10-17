@@ -76,7 +76,7 @@ const HomePage = ({ isAuthenticated, userType, setIsAuthenticated, setUserType }
 
           <div className="header-logo">
             <span className="logo-icon">⚡</span>
-            <h1 className="logo-text">Surety Cart</h1>
+            <h1 className="logo-text">Ada Shopping</h1>
           </div>
 
           <div className="header-actions">
@@ -103,7 +103,7 @@ const HomePage = ({ isAuthenticated, userType, setIsAuthenticated, setUserType }
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <span className="logo-icon">🛍️</span>
-            <h2>InstaMarket</h2>
+            <h2>Ada Shopping</h2>
           </div>
           <button className="close-sidebar" onClick={toggleMenu}>
             <span className="close-icon">✕</span>
@@ -126,10 +126,7 @@ const HomePage = ({ isAuthenticated, userType, setIsAuthenticated, setUserType }
             <span>My Orders</span>
           </Link>
           
-          <Link to="/seller-dashboard" className="nav-item" onClick={toggleMenu}>
-            <span className="nav-icon">🏪</span>
-            <span>Seller Hub</span>
-          </Link>
+          
           
           <a href="#about" className="nav-item" onClick={toggleMenu}>
             <span className="nav-icon">ℹ️</span>

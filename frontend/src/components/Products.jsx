@@ -238,7 +238,7 @@ const handleWishlist = async (product) => {
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <ShoppingBag className="logo-icon" />
-            <h2>Surety Cart</h2>
+            <h2>Ada Shopping </h2>
           </div>
           <button className="close-sidebar" onClick={() => setShowSidebar(false)}>
             <X size={24} />
@@ -264,7 +264,7 @@ const handleWishlist = async (product) => {
           </Link> */}
           
           <Link to="/orders" className="nav-item" onClick={() => setShowSidebar(false)}>
-            <Info size={20} />
+            <ShoppingCart />
             <span>My orders</span>
           </Link>
           <Link to="/about" className="nav-item" onClick={() => setShowSidebar(false)}>
@@ -312,7 +312,7 @@ const handleWishlist = async (product) => {
 
           <div className="logo-section">
             <Shield className="logo-icon" />
-            <h1 className="logo-text">Surety Cart</h1>
+            <h1 className="logo-text">Ada Shopping</h1>
           </div>
           
           <div className="search-bar">
