@@ -31,15 +31,15 @@ const app = express();
 
 // Configure CORS
 const allowedOrigins = [
-  "https://surety-cart.vercel.app",
+  "http://adaa12-shopping.vercel.app",
   "http://localhost:3000",
   "http://localhost:3001",
+  "https://surety-cart.onrender.com",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests with no origin like mobile apps or curl requests
       if (!origin) return callback(null, true);
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
