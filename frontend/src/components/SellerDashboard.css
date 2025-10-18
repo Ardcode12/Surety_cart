@@ -3227,3 +3227,50 @@ margin-top: 24px !important;
   .premium-table td:nth-of-type(7):before { content: "Date"; }
   .premium-table td:nth-of-type(8):before { content: "Actions"; }
 }
+.orders-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+.premium-table {
+  min-width: 900px; /* ensures table is wide enough for all columns */
+  border-collapse: collapse;
+  width: 100%;
+}
+@media (max-width: 480px) {
+  .premium-table, .premium-table thead, .premium-table tbody, .premium-table th, .premium-table td, .premium-table tr {
+    display: block;
+  }
+  
+  .premium-table thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+  
+  .premium-table tr {
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    padding: 10px;
+    background: #fff;
+  }
+  
+  .premium-table td {
+    border: none;
+    position: relative;
+    padding-left: 50%;
+    text-align: left;
+    white-space: normal;
+  }
+  
+  .premium-table td:before {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 45%;
+    padding-right: 10px;
+    white-space: nowrap;
+    font-weight: bold;
+    content: attr(data-label);
+  }
+}
