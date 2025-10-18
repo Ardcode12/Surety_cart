@@ -30,25 +30,30 @@ mongoose.connect(process.env.MONGO_URI, {
 const app = express();
 
 // Configure CORS
+// Configure CORS
 const allowedOrigins = [
-  "http://adaa12-shopping.vercel.app",
+  "https://ada-shopping.vercel.app",  // Fixed: removed trailing slash
   "http://localhost:3000",
   "http://localhost:3001",
-  "https://surety-cart.onrender.com",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
+      
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
       }
     },
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],  // Added OPTIONS
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],  // Explicitly allow headers
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   })
 );
 
