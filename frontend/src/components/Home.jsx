@@ -163,7 +163,7 @@ const HomePage = ({ isAuthenticated, userType, setIsAuthenticated, setUserType }
                 <span className="title-word gradient-text">Authentic</span>
               </span>
               <span className="title-line">
-                <span className="title-word">Instagram</span>
+                
                 <span className="title-word">Sellers</span>
               </span>
             </h1>

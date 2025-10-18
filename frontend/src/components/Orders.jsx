@@ -104,7 +104,7 @@ const onCancelOrder = async (orderId) => {
   }, [prefilled, qty]);
 
   const tax = subtotalDirect * 0.08; // 8% tax
-  const shipping = subtotalDirect > 2000 ? 0 : 99; // Free shipping above ₹2000
+  const shipping = subtotalDirect > 2000 ? 0 : 10; // Free shipping above ₹2000
   const totalDirect = subtotalDirect + tax + shipping;
 
   const onPlaceDirectOrder = async () => {

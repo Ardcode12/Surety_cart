@@ -26,9 +26,8 @@ const Cart = () => {
   const [showCouponInput, setShowCouponInput] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
 
-  // Checkout modal state
   const [showCheckout, setShowCheckout] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('card'); // 'card' | 'upi' | 'cod'
+  const [paymentMethod, setPaymentMethod] = useState('card');
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
@@ -40,7 +39,6 @@ const Cart = () => {
     loadCartItems();
   }, []);
 
-  // Lock page scroll when modal open
   useEffect(() => {
     if (showCheckout) {
       document.body.style.overflow = 'hidden';
@@ -53,17 +51,27 @@ const Cart = () => {
   }, [showCheckout]);
 
   const loadCartItems = async () => {
-    setIsLoading(true);
-    try {
-      const response = await getCart();
-      setCartItems(response.data);
-    } catch (error) {
-      console.error("Failed to fetch cart items:", error);
-      setCartItems([]);
-    } finally {
-      setIsLoading(false);
+  setIsLoading(true);
+  try {
+    const response = await getCart();
+    console.log('=== CART DEBUG ===');
+    console.log('Full response:', response);
+    console.log('Response data:', response.data);
+    
+    if (response.data && response.data.length > 0) {
+      console.log('First item structure:', JSON.stringify(response.data[0], null, 2));
     }
-  };
+    
+    const items = Array.isArray(response.data) ? response.data : [];
+    setCartItems(items);
+  } catch (error) {
+    console.error("Failed to fetch cart items:", error);
+    setCartItems([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const removeItem = async (productId) => {
     try {
@@ -82,7 +90,6 @@ const Cart = () => {
         item.product._id === id ? { ...item, quantity: newQuantity } : item
       )
     );
-    // Optional: persist quantity to server if you add a PUT /cart/:productId route
   };
 
   const applyCoupon = () => {
@@ -97,7 +104,7 @@ const Cart = () => {
 
   const subtotal = cartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0);
   const discount = appliedCoupon ? (subtotal * appliedCoupon.discount / 100) : 0;
-  const delivery = subtotal > 1000 ? 0 : 99;
+  const delivery = subtotal > 1000 ? 0 : 10;
   const total = subtotal - discount + delivery;
 
   const handleCheckout = () => {
@@ -107,12 +114,11 @@ const Cart = () => {
   const handleConfirmPayment = async () => {
     try {
       setProcessing(true);
-      // Simulate payment delay
       setTimeout(async () => {
         await placeOrderFromCart({ method: paymentMethod, status: paymentMethod === 'cod' ? 'pending' : 'paid' });
         setProcessing(false);
         setShowCheckout(false);
-        setCartItems([]); // Clear UI cart
+        setCartItems([]);
         alert('Payment successful! Your order has been placed.');
       }, 1200);
     } catch (e) {
@@ -152,7 +158,6 @@ const Cart = () => {
 
   return (
     <div className="cart-page">
-      {/* Header */}
       <header className="cart-header" data-aos="fade-down">
         <div className="header-container">
           <Link to="/products" className="back-link">
@@ -166,7 +171,6 @@ const Cart = () => {
         </div>
       </header>
 
-      {/* Trust Badges */}
       <div className="trust-badges" data-aos="fade-up">
         <div className="trust-badge" data-aos="zoom-in" data-aos-delay="100">
           <Shield className="badge-icon" />
@@ -183,7 +187,6 @@ const Cart = () => {
       </div>
 
       <div className="cart-content">
-        {/* Cart Items */}
         <div className="cart-items-section">
           <div className="section-header" data-aos="fade-right">
             <h2>Cart Items</h2>
@@ -191,9 +194,8 @@ const Cart = () => {
               className="clear-cart-btn"
               onClick={async () => {
                 try {
-                  const resp = await clearCart();
-                  // console.log('Clear cart response:', resp.data);
-                  await loadCartItems(); // refresh from server
+                  await clearCart();
+                  await loadCartItems();
                 } catch (e) {
                   console.error('Failed to clear cart:', e?.response?.data || e.message);
                   alert(e?.response?.data?.message || 'Could not clear cart. Please try again.');
@@ -213,12 +215,17 @@ const Cart = () => {
                 data-aos-delay={index * 100}
               >
                 <div className="item-image">
-                  <img
-                    src={getFullImageUrl(item.product.image)}
-                    alt={item.product.name}
-                    onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/400'; }}
-                  />
-                </div>
+  <img
+    src={getFullImageUrl(item.product.image) || 'https://dummyimage.com/400x400/cccccc/666666.png&text=No+Image'}
+    alt={item.product.name}
+    className="product-image"
+    onError={(e) => { 
+      console.error(`Image failed to load for ${item.product.name}:`, item.product.image);
+      e.target.src = 'https://dummyimage.com/400x400/cccccc/666666.png&text=No+Image'; 
+    }}
+  />
+</div>
+
 
                 <div className="item-details">
                   <h3>{item.product.name}</h3>
@@ -254,7 +261,6 @@ const Cart = () => {
             ))}
           </div>
 
-          {/* Coupon Section */}
           <div className="coupon-section" data-aos="fade-up">
             <div className="coupon-header" onClick={() => setShowCouponInput(!showCouponInput)}>
               <div className="coupon-title">
@@ -315,7 +321,6 @@ const Cart = () => {
           </div>
         </div>
 
-        {/* Order Summary */}
         <div className="order-summary" data-aos="fade-left">
           <h2>Order Summary</h2>
 
@@ -367,7 +372,6 @@ const Cart = () => {
         </div>
       </div>
 
-      {/* Fake Payment Modal (via Portal) */}
       {showCheckout && createPortal(
         <div className="checkout-modal-overlay" onClick={() => !processing && setShowCheckout(false)}>
           <div className="checkout-modal" onClick={(e) => e.stopPropagation()}>

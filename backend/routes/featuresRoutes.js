@@ -15,12 +15,25 @@ const router = express.Router();
    Helpers
    ========================= */
 
-// Normalize any stored image path to a web-safe path like: /uploads/<filename>
+// Updated to handle Cloudinary URLs properly
 const toWebUploadPath = (p) => {
   if (!p) return null;
+  
+  // If it's already a full URL (Cloudinary, etc), return as-is
+  if (p.startsWith('http://') || p.startsWith('https://')) {
+    return p;
+  }
+  
   try {
     const clean = String(p).replace(/\\/g, "/"); // fix Windows backslashes
-    const filename = path.basename(clean); // just the file name
+    
+    // If it already starts with /uploads/, return as-is
+    if (clean.startsWith('/uploads/')) {
+      return clean;
+    }
+    
+    // Otherwise, extract filename and prepend /uploads/
+    const filename = path.basename(clean);
     return `/uploads/${filename}`;
   } catch {
     return null;
@@ -31,7 +44,7 @@ const shapeProduct = (p) => ({
   _id: p._id,
   name: p.name,
   price: p.price,
-  image: toWebUploadPath(p.image), // always normalize to /uploads/<file>
+  image: p.image, // Pass through the image URL without modification
   seller: p.seller || null,
 });
 
@@ -56,29 +69,40 @@ const upload = multer({ storage });
    ========================= */
 
 // GET /api/features/cart
+// Replace the entire GET /api/features/cart route with this:
+// GET /api/features/cart
 router.get("/cart", protectCustomer, async (req, res) => {
   try {
-    const cart = await Cart.findOne({ customer: req.customer._id }).lean();
+    const cart = await Cart.findOne({ customer: req.customer._id })
+      .populate({
+        path: 'items.product',
+        model: 'Product',
+        populate: {
+          path: 'seller',
+          model: 'Seller',
+          select: 'name businessName'
+        }
+      })
+      .lean();
+
     if (!cart || !cart.items.length) return res.json([]);
 
-    const ids = cart.items.map((i) => i.product);
-    const products = await Product.find({ _id: { $in: ids } }).lean();
-    const map = Object.fromEntries(products.map((p) => [p._id.toString(), shapeProduct(p)]));
-
-    const items = cart.items
-      .filter((i) => map[i.product.toString()])
-      .map((i) => ({
-        product: map[i.product.toString()],
-        quantity: i.qty,
+    // Format the response to match frontend expectations
+    const formattedItems = cart.items
+      .filter(item => item.product) // Filter out any null products
+      .map(item => ({
+        _id: item.product._id,
+        product: item.product,
+        quantity: item.qty,
+        // Include any additional fields the frontend expects
       }));
 
-    res.json(items);
+    res.json(formattedItems);
   } catch (err) {
     console.error("GET /cart error:", err);
     res.status(500).json({ message: "Failed to fetch cart" });
   }
 });
-
 // POST /api/features/cart  { productId, quantity }
 router.post("/cart", protectCustomer, async (req, res) => {
   try {
@@ -145,35 +169,39 @@ router.delete("/cart", protectCustomer, async (req, res) => {
    ========================= */
 
 // GET /api/features/wishlist
+// GET /api/features/wishlist
 router.get("/wishlist", protectCustomer, async (req, res) => {
   try {
-    const wl = await Wishlist.findOne({ customer: req.customer._id }).lean();
+    const wl = await Wishlist.findOne({ customer: req.customer._id })
+      .populate({
+        path: 'items.product',
+        model: 'Product',
+        populate: {
+          path: 'seller',
+          model: 'Seller',
+          select: 'name businessName'
+        }
+      })
+      .lean();
+
     if (!wl || !wl.items.length) return res.json([]);
 
-    const ids = wl.items.map((i) => i.product);
-    const products = await Product.find({ _id: { $in: ids } }).lean();
+    // Format the response
+    const formattedItems = wl.items
+      .filter(item => item.product) // Filter out any null products
+      .map(item => ({
+        ...item.product,
+        dateAdded: item.addedAt || new Date(),
+        inStock: true
+      }));
 
-    const list = products.map((p) => {
-      const addedAt =
-        wl.items.find((i) => i.product.toString() === p._id.toString())?.addedAt ||
-        new Date();
-      return {
-        _id: p._id,
-        name: p.name,
-        price: p.price,
-        image: toWebUploadPath(p.image),
-        seller: p.seller || null,
-        inStock: true,
-        dateAdded: addedAt,
-      };
-    });
-
-    res.json(list);
+    res.json(formattedItems);
   } catch (err) {
     console.error("GET /wishlist error:", err);
     res.status(500).json({ message: "Failed to fetch wishlist" });
   }
 });
+
 
 // POST /api/features/wishlist  { productId }
 router.post("/wishlist", protectCustomer, async (req, res) => {
@@ -232,7 +260,7 @@ router.get("/seller-profile", protectSeller, async (req, res) => {
       profile = created.toObject();
     }
 
-    // Normalize logo path for frontend
+    // Normalize logo path for frontend (but preserve Cloudinary URLs)
     if (profile.logo) {
       profile.logo = toWebUploadPath(profile.logo);
     }

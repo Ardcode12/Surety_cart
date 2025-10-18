@@ -61,6 +61,27 @@ router.get("/test-cloudinary", async (req, res) => {
   }
 });
 
+// Test Cloudinary upload
+router.post("/test-upload", upload.single("test"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    
+    res.json({
+      message: "Upload successful",
+      file: req.file,
+      url: req.file.path || req.file.secure_url || req.file.url,
+      publicId: req.file.filename || req.file.public_id
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: "Upload failed", 
+      error: error.message 
+    });
+  }
+});
+
 // Add this route for debugging
 router.get("/debug-products", async (req, res) => {
   try {
@@ -90,10 +111,9 @@ router.get("/my-products", protectSeller, async (req, res) => {
   }
 });
 
-// POST /api/products (seller) - Add new product with enhanced debugging
+// POST /api/products (seller) - Add new product
 router.post("/", protectSeller, debugUpload, upload.single("image"), async (req, res) => {
   try {
-    // Use console.error for critical debug info
     console.error("=== PRODUCT CREATION DEBUG ===");
     console.error("Request received at:", new Date().toISOString());
     console.error("Seller ID:", req.seller._id);
@@ -101,29 +121,7 @@ router.post("/", protectSeller, debugUpload, upload.single("image"), async (req,
     
     if (req.file) {
       console.error("=== FILE DETAILS ===");
-      console.error(JSON.stringify({
-        fieldname: req.file.fieldname,
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        path: req.file.path,
-        filename: req.file.filename,
-        public_id: req.file.public_id,
-        secure_url: req.file.secure_url,
-        url: req.file.url,
-        resource_type: req.file.resource_type,
-        format: req.file.format,
-        // Additional fields that might exist
-        asset_id: req.file.asset_id,
-        version_id: req.file.version_id,
-        created_at: req.file.created_at,
-        bytes: req.file.bytes,
-        width: req.file.width,
-        height: req.file.height
-      }, null, 2));
-      console.error("Is Cloudinary URL?", req.file.path?.includes('cloudinary'));
-    } else {
-      console.error("NO FILE UPLOADED!");
+      console.error(JSON.stringify(req.file, null, 2));
     }
 
     const {
@@ -138,45 +136,42 @@ router.post("/", protectSeller, debugUpload, upload.single("image"), async (req,
       brand,
     } = req.body;
 
-    console.error("=== REQUEST BODY ===");
-    console.error(JSON.stringify({
-      name,
-      title,
-      price,
-      description,
-      originalPrice,
-      discount,
-      quantity,
-      category,
-      brand
-    }, null, 2));
-
     const finalName = name || title;
     
     if (!finalName || !price || !req.file) {
-      // Delete uploaded image if validation fails
       if (req.file && req.file.public_id) {
         await cloudinary.uploader.destroy(req.file.public_id).catch(() => {});
       }
       return res.status(400).json({ 
         message: "Name, price, and image are required",
-        fileReceived: !!req.file,
-        debug: {
-          hasFile: !!req.file,
-          fileName: req.file?.originalname,
-          filePath: req.file?.path
-        }
+        fileReceived: !!req.file
       });
     }
 
-    // Use the correct URL field - check multiple possible fields
-    const imageUrl = req.file.secure_url || req.file.url || req.file.path;
+    // FIXED: The correct way to get Cloudinary URL
+    let imageUrl = '';
+    let publicId = '';
     
-    console.error("=== IMAGE URL SELECTION ===");
-    console.error("secure_url:", req.file.secure_url);
-    console.error("url:", req.file.url);
-    console.error("path:", req.file.path);
-    console.error("Selected imageUrl:", imageUrl);
+    if (req.file.path) {
+      // When using Cloudinary, the URL is in req.file.path
+      imageUrl = req.file.path;
+      publicId = req.file.filename;
+    } else if (req.file.secure_url) {
+      // Sometimes it might be in secure_url
+      imageUrl = req.file.secure_url;
+      publicId = req.file.public_id;
+    } else if (req.file.url) {
+      // Or in url
+      imageUrl = req.file.url;
+      publicId = req.file.public_id;
+    } else {
+      // Fallback for local storage
+      imageUrl = `/uploads/${req.file.filename}`;
+    }
+    
+    console.error("=== FINAL IMAGE URL ===");
+    console.error("Image URL:", imageUrl);
+    console.error("Public ID:", publicId);
 
     const saved = await Product.create({
       name: finalName,
@@ -188,11 +183,10 @@ router.post("/", protectSeller, debugUpload, upload.single("image"), async (req,
       brand,
       description,
       image: imageUrl,
-      imagePublicId: req.file.public_id || null,
+      imagePublicId: publicId,
       seller: req.seller._id,
     });
 
-    // After saving
     console.error("=== PRODUCT SAVED ===");
     console.error("Product ID:", saved._id);
     console.error("Image URL:", saved.image);
@@ -202,7 +196,6 @@ router.post("/", protectSeller, debugUpload, upload.single("image"), async (req,
     res.status(201).json(populated);
   } catch (error) {
     console.error("=== PRODUCT CREATION ERROR ===", error);
-    // Clean up uploaded image if product creation fails
     if (req.file && req.file.public_id) {
       await cloudinary.uploader.destroy(req.file.public_id).catch(() => {});
     }
@@ -256,21 +249,36 @@ router.put("/:id", protectSeller, upload.single("image"), async (req, res) => {
     // Handle image update
     if (req.file) {
       console.error("=== UPDATE FILE DETAILS ===");
-      console.error(JSON.stringify({
-        path: req.file.path,
-        secure_url: req.file.secure_url,
-        public_id: req.file.public_id,
-        filename: req.file.filename
-      }, null, 2));
+      console.error(JSON.stringify(req.file, null, 2));
 
       // Delete old image from Cloudinary
       if (product.imagePublicId) {
         await cloudinary.uploader.destroy(product.imagePublicId).catch(() => {});
       }
-      // Use the correct URL field
-      const imageUrl = req.file.secure_url || req.file.url || req.file.path;
+      
+      // FIXED: Get the correct URL from Cloudinary upload
+      let imageUrl = '';
+      let publicId = '';
+      
+      if (req.file.path) {
+        imageUrl = req.file.path;
+        publicId = req.file.filename;
+      } else if (req.file.secure_url) {
+        imageUrl = req.file.secure_url;
+        publicId = req.file.public_id;
+      } else if (req.file.url) {
+        imageUrl = req.file.url;
+        publicId = req.file.public_id;
+      } else {
+        imageUrl = `/uploads/${req.file.filename}`;
+      }
+      
       update.image = imageUrl;
-      update.imagePublicId = req.file.public_id || null;
+      update.imagePublicId = publicId;
+      
+      console.error("=== UPDATE IMAGE URL ===");
+      console.error("New image URL:", imageUrl);
+      console.error("New public ID:", publicId);
     }
 
     const updated = await Product.findByIdAndUpdate(

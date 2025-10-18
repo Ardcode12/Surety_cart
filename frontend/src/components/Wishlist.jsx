@@ -5,7 +5,7 @@ import AOS from 'aos';
 import 'aos/dist/aos.css';
 import './Wishlist.css';
 import {
-  Heart, ShoppingCart, ArrowLeft, Star, Shield,
+  Heart, ShoppingCart, ArrowLeft, Shield,
   TrendingUp, Share2, Filter, Grid, List, X
 } from 'lucide-react';
 
@@ -19,7 +19,7 @@ const Wishlist = () => {
   const [filterPrice, setFilterPrice] = useState('all');
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [movingAll, setMovingAll] = useState(false); // NEW: for “Move All to Cart” button
+  const [movingAll, setMovingAll] = useState(false);
 
   useEffect(() => {
     AOS.init({ duration: 800, once: true, easing: 'ease-out-cubic' });
@@ -27,21 +27,26 @@ const Wishlist = () => {
   }, []);
 
   const loadWishlistItems = async () => {
-    setIsLoading(true);
-    try {
-      const response = await getWishlist();
-      const items = (response.data || []).map(item => ({
-        ...item,
-        dateAdded: item.dateAdded ? new Date(item.dateAdded) : new Date()
-      }));
-      setWishlistItems(items);
-    } catch (error) {
-      console.error('Failed to load wishlist:', error);
-      setWishlistItems([]);
-    } finally {
-      setIsLoading(false);
+  setIsLoading(true);
+  try {
+    const response = await getWishlist();
+    console.log('=== WISHLIST DEBUG ===');
+    console.log('Full response:', response);
+    console.log('Response data:', response.data);
+    
+    if (response.data && response.data.length > 0) {
+      console.log('First item structure:', JSON.stringify(response.data[0], null, 2));
     }
-  };
+    
+    const items = Array.isArray(response.data) ? response.data : [];
+    setWishlistItems(items);
+  } catch (error) {
+    console.error('Failed to load wishlist:', error);
+    setWishlistItems([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleRemoveFromWishlist = async (productId) => {
     try {
@@ -65,11 +70,9 @@ const Wishlist = () => {
     }
   };
 
-  // NEW: Move All to Cart
   const handleMoveAllToCart = async () => {
     if (!wishlistItems.length) return;
 
-    // Optional auth guard
     const userType = localStorage.getItem('userType');
     if (userType !== 'customer') {
       alert('Please login as a customer to move items to cart.');
@@ -78,23 +81,17 @@ const Wishlist = () => {
 
     setMovingAll(true);
     try {
-      // Add all to cart in parallel
       const results = await Promise.allSettled(
         wishlistItems.map(item => addToCart(item._id, 1))
       );
 
-      // Collect successfully added productIds
       const successIds = results
         .map((res, idx) => (res.status === 'fulfilled' ? wishlistItems[idx]._id : null))
         .filter(Boolean);
 
-      // Remove only those successfully added from wishlist
       await Promise.allSettled(successIds.map(id => removeFromWishlistApi(id)));
-
-      // Update UI
       setWishlistItems(items => items.filter(i => !successIds.includes(i._id)));
 
-      // Summary message
       const successCount = successIds.length;
       const failCount = wishlistItems.length - successCount;
       if (successCount && !failCount) {
@@ -244,20 +241,24 @@ const Wishlist = () => {
             data-aos-delay={index * 50}
           >
             <div className="item-image-container">
-              <img
-                src={getFullImageUrl(item.image)}
-                alt={item.name}
-                className="item-image"
-                onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/400'; }}
-              />
-              <button
-                className="remove-wishlist-btn"
-                onClick={() => handleRemoveFromWishlist(item._id)}
-                title="Remove from wishlist"
-              >
-                <X size={16} />
-              </button>
-            </div>
+  <img
+    src={getFullImageUrl(item.image) || 'https://dummyimage.com/400x400/cccccc/666666.png&text=No+Image'}
+    alt={item.name}
+    className="item-image"
+    onError={(e) => { 
+      console.error(`Image failed to load for ${item.name}:`, item.image);
+      e.target.src = 'https://dummyimage.com/400x400/cccccc/666666.png&text=No+Image'; 
+    }}
+  />
+
+  <button
+    className="remove-wishlist-btn"
+    onClick={() => handleRemoveFromWishlist(item._id)}
+    title="Remove from wishlist"
+  >
+    <X size={16} />
+  </button>
+</div>
 
             <div className="item-info">
               <div className="seller-row">
